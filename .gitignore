@@ -1,0 +1,36 @@
+# CMake
+CMakeFiles/
+CMakeCache.txt
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# Common build directories
+[Bb]uild*/
+[Oo]ut/
+
+# CLion / JetBrains
+.idea/
+cmake-build-*/
+
+# Visual Studio / Visual Studio Code
+.vs/
+.vscode/
+*.CMakeLists.txt.user
+
+# Compiled Binaries & Objects
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
