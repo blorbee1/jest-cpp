@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
 }
 ```
 
-More in the [guide](docs/guide.md), and runnable programs in [`examples/`](examples/):
+More in the [guide](https://blorbee1.github.io/jest-cpp/docs/getting-started), and runnable programs in [`examples/`](examples/):
 
 | Example | Shows |
 |---|---|
