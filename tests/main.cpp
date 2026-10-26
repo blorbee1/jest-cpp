@@ -18,7 +18,34 @@ std::optional<int> find(const std::vector<int>& v, int x) {
     return std::nullopt;
 }
 
+struct Rational {
+    int n, d;
+    Rational(int n_, int d_) : n(n_), d(d_) {}
+    Rational operator+(const Rational& o) const { return {n * o.d + o.n * d, d * o.d}; }
+};
+
 int main(int argc, char** argv) {
+    init(argc, argv);
+
+    // test if variables declared in 'describe' dont get memory corrupted when going into tests
+    describe("fixtures") {
+        Rational a(1, 2);
+        Rational b(3, 5);
+
+        int counter = 0;
+        beforeEach { counter += 1; };
+
+        it("adds fractions") {
+            Rational r = a + b;
+            expect(r.n).toBe(11);
+            expect(r.d).toBe(10);
+        };
+
+        it("shares state with hooks") {
+            expect(counter).toBe(2);
+        };
+    }
+
     describe("math") {
         static int counter = 0;
         beforeEach { counter = 10; };
@@ -34,9 +61,9 @@ int main(int argc, char** argv) {
         };
 
         describe("nested") {
-            it("fails on purpose") {
+            test.failing("fails on purpose", [] {
                 expect(add(1, 1)).toBe(3);
-            };
+            });
         }
     }
 
@@ -55,6 +82,12 @@ int main(int argc, char** argv) {
     }
 
     describe.each({"alpha", "beta"})("suite for %s", [](const std::string& name) {
+        it("has a name") {
+            expect(name).toMatch("a");
+        };
+    });
+
+    describe.each({'a', 'a'})("suite for %s", [](const std::string& name) {
         it("has a name") {
             expect(name).toMatch("a");
         };
@@ -110,5 +143,5 @@ int main(int argc, char** argv) {
         };
     }
 
-    return run(argc, argv);
+    return run();
 }
