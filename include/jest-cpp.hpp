@@ -1,11 +1,33 @@
 /*
- * jest-cpp.hpp
- * A single-header JestJS C++ port
+ * @file jest-cpp.hpp
+ * @brief A single-header JestJS C++ port
  *
- * Copyright (c) 2026
- * Licensed under the MIT License
+ * jest-cpp provides Jest style syntaax for writing and running C++ tests.
  *
- * Requires C++20 or later
+ * Define `JEST_NO_MACROS` if you don't want any macros from jest-cpp
+ *
+ * @section usage Basic usage
+ *
+ * @code
+ * #include "jest-cpp.hpp"
+ *
+ * int main(int argc, char** argv) {
+ *     init(argc, argv);
+ *
+*      describe("math") {
+ *         it("adds two numbers") {
+ *             expect(1 + 2).toBe(3);
+ *         };
+ *     }
+ *
+ *     return run();
+ * }
+ *
+ * @section requirements Requirements
+ * - C++20 or later
+ *
+ * @copyright Copyright (c) 2026
+ * @license MIT
  */
 
 #pragma once
@@ -33,22 +55,55 @@
 #include <utility>
 #include <vector>
 
+/**
+ * @namespace jest
+ * @brief Public API for the jest-cpp testing framework.
+ */
 namespace jest {
+    /**
+     * @brief A regular expression that retains its original pattern.
+     *
+     * Inherits from std::regex and stores the source pattern for use in assertion failure messages.
+     */
     struct Regex : std::regex {
+        //// Original regular expression pattern.
         std::string source;
+
+        /**
+         * @brief Constructs a regular expression.
+         * @param src Regular expression pattern
+         * @param f Regular expression syntax flags
+         */
         explicit Regex(std::string src, std::regex::flag_type f = std::regex::ECMAScript) : std::regex(src, f), source(std::move(src)) {}
     };
+
     inline namespace literals {
+        /**
+         * @brief Creates a Regex from a string literal.
+         *
+         * @param s Pointer to the literal's characters.
+         * @param n Number of characters in the literal
+         * @return A regex constructed from the literal.
+         *
+         * @code
+         * jest::Regex pattern = "hello.*"_re;
+         * @endcode
+         */
         inline Regex operator""_re(const char* s, std::size_t n) {
             return Regex(std::string(s, n));
         }
     }
 
     namespace detail {
+        /**
+         * @struct ExpectationFailed
+         * @brief Thrown to indicate that an expectation failed its conditions
+         */
         struct ExpectationFailed : std::runtime_error {
             using std::runtime_error::runtime_error;
         };
 
+        /// @cond TURN_OFF_DOXYGEN
         // type traits / concepts
         template <class T>
         struct IsOptional : std::false_type {};
@@ -181,6 +236,7 @@ namespace jest {
             else if constexpr (StringLike<T>) return !std::string_view(v).empty();
             else return true;
         }
+        /// @endcond
 
         // matchers
         template <class T> 
@@ -198,44 +254,121 @@ namespace jest {
 
             // equality
 
-            // toBe: shallow. Pointers compare by address; floats use Object.is rules (NaN==NaN, +0 != -0)
-            template <class U> 
+            /**
+             * @brief Checks whether the actual value equals the expected value.
+             *
+             * Uses Object.is like semantics for floating point values, treating NaN as equal to NaN and +0 != -0.
+             * Pointers are compared by address.
+             *
+             * @tparam U Type of the expected value
+             * @param expected Value to compare against
+             * @throws detail::ExpectationFailed If the assertion fails.
+             */
+            template <class U>
             void toBe(const U& expected) const {
                 check(sameValue(actual, expected), "toBe(" + str(expected) + ")", str(actual));
             }
 
-            // toEqual: depp. Looks through optionals, pointers/smart pointers, containers, and tuples
-            template <class U> 
+            /**
+             * @brief Performs deep equality.
+             *
+             * Deeply compares optionals by comparing their values, pointers are compared by value, so on.
+             *
+             * @tparam U Type of the expected value.
+             * @param expected Value to compare against
+             * @throws detail::ExpectationFailed If the assertion fails
+             */
+            template <class U>
             void toEqual(const U& expected) const {
                 check(deepEq(actual, expected), "toEqual(" + str(expected) + ")", str(actual));
             }
 
-            // truthiness / emptiness
+            /**
+             * @brief Checks that the value is truthy.
+             * @throws detail::ExpectationFailed If the value is falsy
+             */
             void toBeTruthy() const { check(truthy(actual), "toBeTruthy()", str(actual)); }
+
+            /**
+             * @brief Checks that the value is falsy.
+             * @throws detail::ExpectationFailed If the value is truthy
+             */
             void toBeFalsy() const { check(!truthy(actual), "toBeFalsy()", str(actual)); }
+
+            /**
+             * @brief Checks that the value is considered defined.
+             *
+             * Defined values only matter with std::optional and pointers, every other value is always "defined"
+             * @throws detail::ExpectationFailed If the value is not defined
+             */
             void toBeDefined() const { check(!isEmpty(actual), "toBeDefined()", str(actual)); }
+
+            /**
+             * @brief Checks that the value is considered undefined.
+
+             * Defined values only matter with std::optional and pointers, every other value is always "defined"
+             * @throws detail::ExpectationFailed If the value is defined
+             *
+             * @see toBeNull
+             */
             void toBeUndefined() const { check(isEmpty(actual), "toBeUndefined()", str(actual)); }
+
+            /**
+             * @brief Alias for toBeUndefined
+             * @see toBeUndefined
+             */
             void toBeNull() const { check(isEmpty(actual), "toBeNull()", str(actual)); }
 
-            // numbers
-            template <class U> 
-            void toBeGreaterThan(const U& e) const {
-                check(cmpLt(e, actual), "toBeGreaterThan(" + str(e) + ")", str(actual));
-            }
-            template <class U> 
-            void toBeGreaterThanOrEqual(const U& e) const {
-                check(cmpLt(e, actual) || cmpEq(actual, e), "toBeGreaterThanOrEqual(" + str(e) + ")", str(actual));
-            }
-
-            template <class U> 
-            void toBeLessThan(const U& e) const {
-                check(cmpLt(actual, e), "toBeLessThan(" + str(e) + ")", str(actual));
-            }
-            template <class U> 
-            void toBeLessThanOrEqual(const U& e) const {
-                check(cmpLt(actual, e) || cmpEq(actual, e), "toBeLessThanOrEqual(" + str(e) + ")", str(actual));
+            /**
+             * @brief Checks whether actual > expected.
+             * @tparam U Type of the expected value.
+             * @param expected Lower bound for the actual value.
+             * @throws detail::ExpectationFailed If the comparison fails.
+             */
+            template <class U>
+            void toBeGreaterThan(const U& expected) const {
+                check(cmpLt(expected, actual), "toBeGreaterThan(" + str(expected) + ")", str(actual));
             }
 
+            /**
+             * @brief Checks whether actual >= expected.
+             * @tparam U Type of the expected value.
+             * @param expected Lower bound for the actual value.
+             * @throws detail::ExpectationFailed If the comparison fails.
+             */
+            template <class U>
+            void toBeGreaterThanOrEqual(const U& expected) const {
+                check(cmpLt(expected, actual) || cmpEq(actual, expected), "toBeGreaterThanOrEqual(" + str(expected) + ")", str(actual));
+            }
+
+            /**
+             * @brief Checks whether actual < expected.
+             * @tparam U Type of the expected value.
+             * @param expected Upper bound for the actual value.
+             * @throws detail::ExpectationFailed If the comparison fails.
+             */
+            template <class U>
+            void toBeLessThan(const U& expected) const {
+                check(cmpLt(actual, expected), "toBeLessThan(" + str(expected) + ")", str(actual));
+            }
+
+            /**
+             * @brief Checks whether actual <= expected.
+             * @tparam U Type of the expected value.
+             * @param expected Upper bound for the actual value.
+             * @throws detail::ExpectationFailed If the comparison fails.
+             */
+            template <class U>
+            void toBeLessThanOrEqual(const U& expected) const {
+                check(cmpLt(actual, expected) || cmpEq(actual, expected), "toBeLessThanOrEqual(" + str(expected) + ")", str(actual));
+            }
+
+            /**
+             * @brief Checks whether a floating point number is close to an expected value.
+             * @param expected Expected numeric value.
+             * @param digits Number of decimal digits used to determine tolerance.
+             * @throws detail::ExpectationFailed If the values are not sufficiently close.
+             */
             void toBeCloseTo(double expected, int digits = 2) const {
                 static_assert(std::is_arithmetic_v<T>, "toBeCloseTo needs a number");
                 const double a = static_cast<double>(actual);
@@ -245,7 +378,15 @@ namespace jest {
                 check(pass, "toBeCloseTo(" + str(expected) + ", " + std::to_string(digits) + ")", str(actual));
             }
 
-            // strings and containers
+            /**
+             * @brief Checks whether a string contains a substring or a range contains an item.
+             *
+             * Ranges are anything that has std::begin/std::end defined
+             *
+             * @tparam U Type of the item to find
+             * @param item Item or substring to search for.
+             * @throws detail::ExpectationFailed If the item is not found.
+             */
             template <class U>
             void toContain(const U& item) const {
                 bool found = false;
@@ -260,6 +401,11 @@ namespace jest {
                 check(found, "toContain(" + str(item) + ")", str(actual));
             }
 
+            /**
+             * @brief Checks the length of a string or range.
+             * @param n Expected length.
+             * @throws detail::ExpectationFailed If the length differs.
+             */
             void toHaveLength(size_t n) const {
                 size_t len;
                 if constexpr (StringLike<T>) len = std::string_view(actual).size();
@@ -269,37 +415,55 @@ namespace jest {
             void toHaveLength(unsigned int n) const {
                 toHaveLength(static_cast<size_t>(n));
             }
+
+            /**
+             * @throws std::runtime_error If the supplied integer length is negative
+             */
             void toHaveLength(int n) const {
                 if (n < 0)
                     throw std::runtime_error("Invalid length");
                 toHaveLength(static_cast<size_t>(n));
             }
 
-            // toMatch(regex) searches the regular expression
+            /**
+             * @brief Checks whether a string contains a match for a regular expression.
+             * @param re Regular expression to search for.
+             * @throws detail::ExpectationFailed If no match is found.
+             */
             void toMatch(const Regex& re) const {
                 static_assert(StringLike<T>, "toMatch needs a string");
                 const std::string s = std::string(std::string_view(actual));
                 check(std::regex_search(s, re), "toMatch(/" + re.source + "/)", str(actual));
             }
 
-            // toMatch(regex) searches the regular expression
+            /**
+             * @brief Checks whether a string contains a match for a standard regex.
+             * @param re Regular expression to search for.
+             * @throws detail::ExpectationFailed If no match is found,
+             */
             void toMatch(const std::regex& re) const {
                 static_assert(StringLike<T>, "toMatch needs a string");
                 const std::string s = std::string(std::string_view(actual));
                 check(std::regex_search(s, re), "toMatch(<regex>)", str(actual));
             }
 
-            // toMatch(string) checks for substring
+            /**
+             * @brief Checks whether a string contains the specifided substring.
+             * @param sub Substring to find.
+             * @throws detail::ExpectationFailed If the substring is not found.
+             */
             void toMatch(const std::string& sub) const {
                 static_assert(StringLike<T>, "toMatch needs a string");
                 check(std::string_view(actual).find(sub) != std::string_view::npos, "toMatch(" + str(sub) + ")", str(actual));
             }
-            // toMatch(string) checks for substring
             void toMatch(const char* sub) const {
                 toMatch(std::string(sub));
             }
 
-            // callables
+            /**
+             * @brief Checks whether a callable throws any exception.
+             * @throws detail::ExpectationFailed If the callable does not throw.
+             */
             void toThrow() const {
                 bool threw = false;
                 try {
@@ -310,6 +474,11 @@ namespace jest {
                 check(threw, "toThrow()", threw ? "threw" : "did not throw");
             }
 
+            /**
+             * @brief Checks whether a callable throws an exception whose message contains a substring
+             * @param substr Substring expected in the exception message.
+             * @throws detail::ExpectationFailed If the callable does not throw a matching exception.
+             */
             void toThrow(const std::string& substr) const {
                 bool ok = false;
                 std::string what = "did not throw";
@@ -324,6 +493,8 @@ namespace jest {
                 check(ok, "toThrow(" + str(substr) + ")", what);
             }
         };
+
+        /// @cond TURN_OFF_DOXYGEN
 
         template <class T>
         struct ValueHolder {
@@ -673,6 +844,8 @@ namespace jest {
             else f(row);
         }
 
+        /// @endcond
+
         template <class Row>
         class EachBinder {
         private:
@@ -750,9 +923,38 @@ namespace jest {
     }
 
     // public API
+    /**
+     * @brief Registers and executes a test case.
+     *
+     * Supports ordinary tests, parameterized tests through .each(), and tests that are expected to fail through .failing().
+     */
     inline const detail::TestApi it{}, test{};
+
+    /**
+     * @brief Defines a test suite or nested test group.
+     *
+     * Groups tests under a descriptive name. Suites can register lifecycle hooks and contain nested suites.
+     *
+     * Supports parameterized suite definitions through .each().
+     */
     inline const detail::DescribeApi describe{};
 
+    /**
+     * @brief Creates an expectation for a value.
+     *
+     * The returned object provides matchers such as toBe(), toEqual(), toContain(), and toThrow().
+     *
+     * String literals are converted to std;:string before being stored.
+     *
+     * @tparam T Type of the value being tested.
+     * @param value Value to test
+     * @return An expectation object
+     *
+     * @code
+     * expect(42).toBe(42);
+     * expect("hello").toContain("ell");
+     * @endcode
+     */
     template <class T>
     auto expect(T&& value) {
         if constexpr (std::is_convertible_v<T, const char*> && !std::is_same_v<std::decay_t<T>, std::nullptr_t>)
@@ -761,20 +963,57 @@ namespace jest {
             return detail::Expectation<std::decay_t<T>>(std::forward<T>(value));
     }
 
-    // rows for it.each / describe.each when every row is a different typed tuple:
-    //   it.each(table<int, int, int>({{1, 1, 2}, {1, 2, 3}}))("%d + %d = %d", [](int a, int b, int sum) { ... });
+    /**
+     * @brief Creates a typed table of rows for parmeterized tests.
+     *
+     * Each row is a tuple. When passed to it.each(), its elements are supplied as callback arguments.
+     *
+     * @tparam Ts Types of tghe columns.
+     * @param rows Initializer list of rows.
+     * @return A vector containing the supplied rows.
+     *
+     * @code
+     * it.each(table<int, int, int>({
+     *     {1, 1, 2}
+     *     {1, 2, 3}
+     * })("%d + %d = %d", [](int a, int b, int sum) {
+     *     expect(a + b).toBe(sum);
+     * });
+     * @endcode
+     */
     template <class... Ts>
     std::vector<std::tuple<Ts...>> table(std::initializer_list<std::tuple<Ts...>> rows) {
         return std::vector<std::tuple<Ts...>>(rows);
     }
 
-    // call first thing in main, BEFORE the first describe/it
+    /**
+     * @brief Initializes the test runner for command line arguments.
+     *
+     * Call this function at the beginning of main(), before registering any suites or tests.
+     *
+     * Supported options include:
+     * - `-v`, `--verbose`: Print every test result.
+     * - `-t`, `--testNamePattern <regex>`: Run tests matching a regular expression against their full names.
+     * - `--timeout <ms>`: Set the default per-test timeout.
+     * - `--no-color`: Disable colored output.
+     * - `-h`, `--help`: Print usage information and exit.
+     *
+     * @param argc Argument count from main().
+     * @param argv Argument vector from main().
+     *
+     * @note Invalid arguments cause the process to exit with status of 2.
+     */
     inline void init(int argc, char** argv) {
         detail::Runner::get().init(argc, argv);
     }
 
-    // runs everything registered and prints the summary
-    // returns 0 if all tests passed, 1 if any failed, 2 for usage error
+    /**
+     * @brief Prints the test summary and returns the test result.
+     *
+     * @return 0 if all tests passed, 1 if any test failed.
+     *
+     * @note If init() was not called, the runner uses default options and prints a warning.
+     */
     inline int run() {
         auto& r = detail::Runner::get();
         if (!r.initialized())
@@ -786,23 +1025,108 @@ namespace jest {
 // define JEST_NO_MACROS before including to not define the macros
 #ifndef JEST_NO_MACROS
 
+/// @cond TURN_OFF_DOXYGEN
 #define JEST_CAT_(a, b) a##b
 #define JEST_CAT(a, b) JEST_CAT_(a, b)
-// describe("name") { ... }
+/// @endcond
+
+/**
+ * @def describe(name)
+ * @brief Declares a name test suite.
+ *
+ * Creates a scope in which tests and nested suites can be registered.
+ * Lifecycle hooks are associated with the current suite.
+ *
+ * @param name Descriptive name of the suite.
+ *
+ * @code
+ * describe("math") {
+ *     ...
+ * }
+ * @endcode
+ */
 #define describe(name) if (::jest::detail::DescribeScope JEST_CAT(jest_scope_, __COUNTER__){name}; true)
 
-// it("name") { ... };
+/**
+ * @def it
+ * @brief Declares a test case.
+ *
+ * Registers a test case with the current test suite.
+ *
+ * @par Supported syntax
+ *
+ * A test with default timeout:
+ * @code
+ * it("name") {
+ *     ...
+ * };
+ * @endcode
+ *
+ * A test with a custom timeout:
+ * @code
+ * it("name", 5000) {
+ *     ...
+ * };
+ * @endcode
+ *
+ *
+ * @see test
+ */
 #define it(...) ::jest::detail::TestRegistrar{__VA_ARGS__} = [&]()
-// test("name") { ... };
+
+/**
+ * @brief Alias for `it`
+ * @see it
+ */
 #define test(...) it(__VA_ARGS__)
 
-// beforeAll { ... };
+/**
+ * @brief Code that is ran before all the test cases in a describe block
+ *
+ * Must be ran BEFORE any test case is called.
+ *
+ * @par Example
+ * @code
+ * beforeAll { counter = 0; };
+ * @endcode
+ */
 #define beforeAll ::jest::detail::HookRegistrar{&::jest::detail::Frame::before_all} = [&]()
-// afterAll { ... };
+
+/**
+ * @brief Code that is ran after every test case in a describe block
+ *
+ * Must be ran BEFORE any test case is called.
+ * `afterAll` will run AFTER the local variables in the describe's block has been deallocated.
+ *
+ * @par Example
+ * @code
+ * afterAll { cleanup(); };
+ * @endcode
+ */
 #define afterAll ::jest::detail::HookRegistrar{&::jest::detail::Frame::after_all} = [&]()
-// beforeEach { ... };
+
+/**
+ * @brief Code that is ran before each test case in a describe block
+ *
+ * Must be ran BEFORE any test case is called.
+ *
+ * @par Example
+ * @code
+ * beforeEach { counter = 0; };
+ * @endcode
+ */
 #define beforeEach ::jest::detail::HookRegistrar{&::jest::detail::Frame::before_each} = [&]()
-// afterEach { ... };
+
+/**
+ * @brief Code that is ran after each test case in a describe block
+ *
+ * Must be ran BEFORE any test case is called.
+ *
+ * @par Example
+ * @code
+ * afterEach { counter = 0; };
+ * @endcode
+ */
 #define afterEach ::jest::detail::HookRegistrar{&::jest::detail::Frame::after_each} = [&]()
 
 #endif

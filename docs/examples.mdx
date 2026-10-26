@@ -1,0 +1,41 @@
+import CodeBlock from "@theme/CodeBlock";
+import basics from '!!raw-loader!@site/../examples/basics.cpp';
+import hooks from '!!raw-loader!@site/../examples/hooks.cpp';
+import eachAndFailing from '!!raw-loader!@site/../examples/each_and_failing.cpp';
+import matchers from '!!raw-loader!@site/../examples/matchers.cpp';
+
+# Examples
+
+Every example is a complete program in the [`examples/`](https://github.com/blorbee1/jest-cpp/tree/main/examples) directory
+
+To build and run one:
+
+```sh
+cmake -S . -B build
+cmake --build build
+./build/examples/basics --verbose
+```
+
+## Basics
+
+`describe`, `it`, `expect`, fixtures, and nested blocks.
+
+<CodeBlock language="cpp" title="examples/basics.cpp" showLineNumbers>{basics}</CodeBlock>
+
+## Hooks
+
+`beforeAll`, `beforeEach`, `afterEach` and their order.
+
+<CodeBlock language="cpp" title="examples/hooks.cpp" showLineNumbers>{hooks}</CodeBlock>
+
+## Each and failing
+
+Table driven tests and tests that are expected to fail.
+
+<CodeBlock language="cpp" title="examples/each_and_failing.cpp" showLineNumbers>{eachAndFailing}</CodeBlock>
+
+## Matchers
+
+A tour of the matchers.
+
+<CodeBlock language="cpp" title="examples/matchers.cpp" showLineNumbers>{matchers}</CodeBlock>
