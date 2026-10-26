@@ -21,10 +21,11 @@ int main(int argc, char** argv) {
         });
         // you can use printf-like string builders (%d, %i, %s, etc) to fill in the blanks of the test name
         // in this example, the output you will be seeing is
-        // 1 + 1 = 2
-        // 1 + 2 = 3
-        // 2 + 1 = 3
-        // TODO: finish explaination of this
+        // 1 + 1 = 2   1 + 2 = 3   2 + 1 = 3
+        // each tuple is what is supplied to your test function, so in this case
+        // {1, 1, 2}, the first tuple, supplies 1 + 1 = 2
+        // {1, 2, 3}, supplies 1 + 2 = 3
+        // and so on
 
         // using a flat list just loops over each entry
         it.each({1, 2, 3})("%i is positive (row %#)", [](int n) {
