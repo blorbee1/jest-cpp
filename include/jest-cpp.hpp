@@ -233,7 +233,7 @@ namespace jest {
             }
             template <class U> 
             void toBeLessThanOrEqual(const U& e) const {
-                check(cmpLt(actual, e) || cmpEqa(actual, e), "toBeLessThanOrEqual(" + str(e) + ")", str(actual));
+                check(cmpLt(actual, e) || cmpEq(actual, e), "toBeLessThanOrEqual(" + str(e) + ")", str(actual));
             }
 
             void toBeCloseTo(double expected, int digits = 2) const {
@@ -315,11 +315,11 @@ namespace jest {
                 std::string what = "did not throw";
                 try {
                     actual();
-                } catch (std::exception& e) {
-                    what = std::string("threw \"") + e.what() = "\"";
-                    ok = std::string_view(e.what()).find(substr) != std::string::npos;
+                } catch (const std::exception& e) {
+                    what = std::string("threw \"") + e.what() + "\"";
+                    ok = std::string_view(e.what()).find(substr) != std::string_view::npos;
                 } catch (...) {
-                    what = "threw non-std exception";
+                    what = "threw a non-std exception";
                 }
                 check(ok, "toThrow(" + str(substr) + ")", what);
             }
@@ -334,218 +334,9 @@ namespace jest {
         template <class T>
         struct Expectation : private ValueHolder<T>, public Matchers<T> {
             Matchers<T> never; // "not" is reserved keyword
-            explicit Expectation(T v) : ValueHolder<T>(std::move(v)), Matchers<T>{this->held, false}, never{this->held, true} {}
+            explicit Expectation(T v) : ValueHolder<T>(std::move(v)), Matchers<T>(this->held, false), never(this->held, true) {}
             Expectation(const Expectation&) = delete;
             Expectation& operator=(const Expectation&) = delete;
-        };
-
-        // suite tree
-        using Hooks = std::vector<std::function<void()>>;
-        struct Test {
-            std::string name;
-            std::function<void()> fn;
-            int timeoutMs; // -1 = use default
-            bool expectFail; // test.failing
-        };
-        struct Suite {
-            std::string name;
-            Hooks before_all, after_all, before_each, after_each;
-            std::vector<Test> tests;
-            std::vector<std::unique_ptr<Suite>> children;
-            std::vector<std::shared_ptr<const void>> keepAlive; // data that describe.each bodies refer to
-        };
-
-        inline Suite& root() {
-            static Suite r;
-            return r;
-        }
-        inline Suite*& current() {
-            static Suite* c = &root();
-            return c;
-        }
-
-        inline void addTest(std::string name, std::function<void()> fn, int timeoutMs, bool expectFail) {
-            current()->tests.push_back(Test{std::move(name), std::move(fn), timeoutMs, expectFail});
-        }\
-
-        // RAII: entering a describe block pushes a suite, leaving it pops
-        struct DescribeScope {
-            Suite* prev;
-            explicit DescribeScope(const std::string& name) : prev(current()) {
-                auto s = std::make_unique<Suite>();
-                s->name = name;
-                Suite* raw = s.get();
-                prev->children.push_back(std::move(s));
-                current() = raw;
-            }
-            ~DescribeScope() {
-                current() = prev;
-            }
-            DescribeScope(const DescribeScope&) = delete;
-            DescribeScope& operator=(const DescribeScope&) = delete;
-        };
-
-        // Registrar{"name"} = [&]() {...}; -> stores the lambda for later
-        struct TestRegistrar {
-            std::string name;
-            int timeoutMs;
-            explicit TestRegistrar(std::string n, int timeout = -1) : name(std::move(n)), timeoutMs(timeout) {}
-            void operator=(std::function<void()> fn) {
-                addTest(name, std::move(fn), timeoutMs, false);
-            }
-        };
-        struct HookRegistrar {
-            Hooks Suite::*slot;
-            void operator=(std::function<void()> fn) {
-                (current()->*slot).push_back(std::move(fn));
-            }
-        };
-
-        // .each / .failing
-        struct Arg {
-            std::string raw, quoted;
-        };
-        template <class T>
-        Arg makeArg(const T& v) {
-            Arg a;
-            a.quoted = str(v);
-            if constexpr (StringLike<T>) a.raw = std::string(std::string_view(v));
-            else a.raw = a.quoted;
-            return a;
-        }
-
-        // printf-style titled: %s, %d, %i, %f (plain), %j %o %p (quoted), %# (row index), %$ (row number), etc
-        inline std::string formatTitle(const std::string& tpl, const std::vector<Arg>& args, std::size_t index) {
-            std::string out;
-            std::size_t next = 0;
-            for (std::size_t i = 0; i < tpl.size(); ++i) {
-                const char ch = tpl[i];
-                if (ch == '%' && i + 1 < tpl.size()) {
-                    const char k = tpl[i + 1];
-                    if (k == '%') { out += '%'; ++i; continue; }
-                    if (k == '#') { out += std::to_string(index); ++i; continue; }
-                    if (k == '$') { out += std::to_string(index + 1); ++i; continue; }
-                    if ((k == 's' || k == 'd' || k == 'i' || k == 'f' || k == 'j' || k == 'o' || k =='p') && next < args.size()) {
-                        const Arg& a = args[next++];
-                        out += (k == 'j' || k == 'o' || k == 'p') ? a.quoted : a.raw;
-                        ++i;
-                        continue;
-                    }
-                }
-                out += ch;
-            }
-            return out;
-        }
-
-        template <class Row>
-        std::vector<Arg> rowArgs(const Row& row) {
-            if constexpr (TupleLike<Row>)
-                return std::apply([](const auto&... e) { return std::vector<Arg>{makeArg(e)...}; }, row);
-            else return {makeArg(row)};
-        }
-        // tuple-like rows (tuple, pair, array) are spread into the callback's parameters
-        template <class F, class Row>
-        void callWithRow(F& f, const Row& row) {
-            if constexpr (TupleLike<Row>) std::apply(f, row);
-            else f(row);
-        }
-
-        // tests registered inside a describe.each body capture by reference, so the callback's parameters must be references into data that outlives the call
-        template <class M>
-        struct MemFnTraits;
-        template <class C, class R, bool N, class... A>
-        struct MemFnTraits<R (C::*)(A...) const noexcept(N)> {
-            static constexpr bool refsOnly = (std::is_reference_v<A> && ...);
-        };
-        template <class C, class R, bool N, class... A>
-        struct MemFnTraits<R (C::*)(A...) noexcept(N)> {
-            static constexpr bool refsONly = (std::is_reference_v<A> && ...);
-        };
-
-        template <class F>
-        constexpr bool takesRefsOnly() {
-            using G = std::remove_cvref_t<F>;
-            if constexpr (requires { &G::operator(); }) return MemFnTraits<decltype(&G::operator())>::refsOnly;
-            else return true; // generic lamdas / function pointers: cant tell
-        }
-
-        template <class Row>
-        class EachBinder {
-        private:
-            std::vector<Row> rows;
-            bool failing;
-
-        public:
-            EachBinder(std::vector<Row> r, bool fail) : rows(std::move(r)), failing(fail) {}
-            template <class F>
-            void operator()(const std::string& name, F&& fn, int timeoutMs = -1) const {
-                auto f = std::make_shared<std::decay_t<F>>(std::forward<F>(fn));
-                for (std::size_t i = 0; i < rows.size(); ++i) {
-                    Row row = rows[i];
-                    addTest(formatTitle(name, rowArgs(row), i), [f, row] { callWithRow(*f, row); }, timeoutMs, failing);
-                }
-            }
-        };
-
-        template <class Row>
-        class DescribeEachBinder {
-        private:
-            std::vector<Row> rows;
-
-        public:
-            DescribeEachBinder(std::vector<Row> r, bool) : rows(std::move(r)) {}
-            template <class F>
-            void operator()(const std::string& name, F&& fn, int /*timeoutMs, unsued*/ = -1) const {
-                static_assert(takesRefsOnly<F>(), "describe.each: take the row parameters as const references (e.g. 'const std::string& s')");
-                auto rows_ = std::make_shared<const std::vector<Row>>(rows);
-                current()->keepAlive.push_back(rows_);
-                for (std::size_t i = 0; i < rows_->size(); ++i) {
-                    DescribeScope scope{formatTitle(name, rowArgs((*rows_)[i]), i)};
-                    callWithRow(fn, (*rows_)[i]);
-                }
-            }
-        };
-
-        // {"a", "b"} gives const char* rows; store them as std::string so callbacks can take it
-        template <class T>
-        using RowOf = std::conditional_t<std::is_pointer_v<T> && std::is_same_v<std::remove_cv_t<std::remove_pointer_t<T>>, char>, std::string, T>;
-
-        template <template <class> class Binder>
-        struct EachFn {
-            bool failing;
-            template <class R>
-            requires Range<R> auto operator()(const R& rows) const {
-                using Row = RowOf<std::decay_t<decltype(*std::begin(rows))>>;
-                return Binder<Row>(std::vector<Row>(std::begin(rows), std::end(rows)), failing);
-            }
-            template <class T>
-            auto operator()(std::initializer_list<T> rows) const {
-                using Row = RowOf<T>;
-                return Binder<Row>(std::vector<Row>(rows.begin(), rows.end()), failing);
-            }
-        };
-
-        struct FailingApi {
-            EachFn<EachBinder> each{true};
-            void operator()(const std::string& name, std::function<void()> fn, int timeoutMs = -1) const {
-                addTest(name, std::move(fn), timeoutMs, true);
-            }
-        };
-
-        struct TestApi {
-            EachFn<EachBinder> each{false};
-            FailingApi failing{};
-            void operator()(const std::string& name, std::function<void()> fn, int timeoutMs = -1) const {
-                addTest(name, std::move(fn), timeoutMs, false);
-            }
-        };
-
-        struct DescribeApi {
-            EachFn<DescribeEachBinder> each{false};
-            void operator()(const std::string& name, const std::function<void()>& fn) const {
-                DescribeScope scope{name};
-                fn();
-            }
         };
 
         // command line + runner
@@ -622,16 +413,28 @@ namespace jest {
             return out;
         }
 
+        using Hooks = std::vector<std::function<void()>>;
+
+        struct Frame {
+            std::string name;
+            Hooks before_all, after_all, before_each, after_each;
+            std::size_t beforeAllRan = 0; // beforeAll hooks run lazily right before the first test that actually runs
+            bool testsRan = false; // afterAll only runs if some test ran in this block
+        };
+
         class Runner {
         private:
             using Clock = std::chrono::steady_clock;
             Options opts;
             std::regex re;
             bool hasRe = false;
+            bool initialized_ = false;
             std::ostream& out = std::cout;
-            std::vector<const Suite*> chain; // root .. current suite
+            Frame root;
+            std::vector<Frame*> chain{&root}; // root .. innermost describe
             std::size_t headingsPrinted = 1; // verbose: how many chain entries have had their heading printed
             int passed = 0, failed = 0, skipped = 0;
+            Clock::time_point start = Clock::now();
 
             static constexpr const char *GREEN = "\033[32m",
                                         *RED = "\033[31m",
@@ -641,25 +444,6 @@ namespace jest {
 
             std::string paint(const char* code, const std::string& s) const {
                 return opts.color ? std::string(code) + s + RESET : s;
-            }
-            
-            static std::string join(const std::string& prefix, const std::string& name) {
-                return prefix.empty() ? name : prefix + " " + name;
-            }
-
-            bool selected(const std::string& fullName) const {
-                return !hasRe || std::regex_search(fullName, re);
-            }
-            bool anySelected(const Suite& s, const std::string& fullName) const {
-                for (const Test& t : s.tests) if (selected(join(fullName, t.name))) return true;
-                for (const auto& c : s.children) if (anySelected(*c, join(fullName, c->name))) return true;
-                return false;
-            }
-
-            static int countTests(const Suite& s) {
-                int n = static_cast<int>(s.tests.size());
-                for (const auto& c : s.children) n += countTests(*c);
-                return n;
             }
 
             void flushHeadings() {
@@ -682,25 +466,81 @@ namespace jest {
                     for (std::size_t i = 1; i < chain.size(); ++i) path += chain[i]->name + " > ";
                     out << paint(RED, "FAIL " + path + name) << '\n' << indentLines(message, "\t") << "\n\n";
                 }
+                out << std::flush;
             }
 
-            void runHooks(const Hooks& hooks, const std::string& label) {
-                for (const auto& h : hooks) {
-                    try {
-                        h();
-                    } catch (const std::exception& e) {
-                        report(false, label, std::string("Unexpected exception: ") + e.what(), 0);
-                    } catch (...) {
-                        report(false, label, "Unexpected non-std exception", 0);
-                    }
+            void runHook(const std::function<void()>& hook, const std::string& label) {
+                try {
+                    hook();
+                } catch (const std::exception& e) {
+                    report(false, label, std::string("Unexpected exception: ") + e.what(), 0);
+                } catch (...) {
+                    report(false, label, "Unexpected non-std exception", 0);
                 }
             }
 
-            void runTest(const Test& t) {
-                const int timeout = t.timeoutMs >= 0 ? t.timeoutMs : opts.timeoutMs;
+        public:
+            Runner() {
+                if (const char* nc = std::getenv("NO_COLOR"); nc && *nc)
+                    opts.color = false;
+            }
+            Runner(const Runner&) = delete;
+            Runner& operator=(const Runner&) = delete;
+            static Runner& get() { static Runner r; return r; }
+
+            bool initialized() const {
+                return initialized_;
+            }
+
+            void init(int argc, char** argv) {
+                std::vector<std::string> args;
+                for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]);
+                if (auto code = parseArgs(args, argc > 0 ? argv[0] : "tests", opts)) std::exit(*code);
+                if (!opts.pattern.empty()) {
+                    try {
+                        re = std::regex(opts.pattern);
+                        hasRe = true;
+                    } catch (const std::regex_error& e) {
+                        std::cerr << "Invalid --testNamePattern regex: " << e.what() << '\n';
+                        std::exit(2);
+                    }
+                }
+                initialized_ = true;
+            }
+
+            void enter(Frame* f) {
+                chain.push_back(f);
+            }
+            void leave(Frame* f) {
+                if (f->testsRan)
+                    for (const auto& h : f->after_all) runHook(h, "afterAll");
+                chain.pop_back();
+                if (headingsPrinted > chain.size())
+                    headingsPrinted = chain.size();
+            }
+
+            void addHook(Hooks Frame::*slot, std::function<void()> fn) {
+                (chain.back()->*slot).push_back(std::move(fn));
+            }
+
+            void runTest(const std::string& name, const std::function<void()>& fn, int timeoutMs, bool expectFail) {
+                std::string full;
+                for (std::size_t i = 1; i < chain.size(); ++i)
+                    full += chain[i]->name + " ";
+                full += name;
+                if (hasRe && !std::regex_search(full, re)) {
+                    ++skipped;
+                    return;
+                }
+
+                for (Frame* f : chain) f->testsRan = true;
+                for (Frame* f : chain)
+                    while (f->beforeAllRan < f->before_all.size()) runHook(f->before_all[f->beforeAllRan++], "beforeAll");
+
+                const int timeout = timeoutMs >= 0 ? timeoutMs : opts.timeoutMs;
                 bool testFailed = false;
                 std::string error;
-                
+
                 auto fail = [&](std::string msg) {
                     if (!testFailed) {
                         testFailed = true;
@@ -721,69 +561,35 @@ namespace jest {
 
                 long long ms = 0;
                 guarded([&] {
-                    for (const Suite* c : chain)
-                        for (const auto& h : c->before_each) h();
+                    for (const Frame* f : chain)
+                        for (const auto& h : f->before_each) h();
                 });
 
                 if (!testFailed) {
-                    const auto start = Clock::now();
-                    guarded(t.fn);
-                    ms = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start).count();
+                    const auto t0 = Clock::now();
+                    guarded(fn);
+                    ms = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - t0).count();
+                    // tests are synchronous, so just check timeout at the end of it
                     if (!testFailed && ms > timeout)
-                        fail("Exceeded tiemout of " + std::to_string(timeout) + " ms for a test (took " + std::to_string(ms) + " ms).");
+                        fail("Exceeded timeout of " + std::to_string(timeout) + " ms for a test (took " + std::to_string(ms) + " ms).");
                 }
-                
+
                 guarded([&] {
                     for (auto rit = chain.rbegin(); rit != chain.rend(); ++rit)
                         for (const auto& h : (*rit)->after_each) h();
                 });
 
-                if (t.expectFail) {
-                    report(testFailed, t.name, testFailed ? "" : "Failing test passed even though it was supposed to fail. Remove '.failing' to remove error.", ms);
+                if (expectFail) {
+                    report(testFailed, name, testFailed ? "" : "Failing test passed even though it was supposed to fail.", ms);
                 } else {
-                    report(!testFailed, t.name, error, ms);
+                    report(!testFailed, name, error, ms);
                 }
             }
 
-            void runSuite(const Suite& s, const std::string& fullName) {
-                if (!anySelected(s, fullName)) { skipped += countTests(s); return; }
-                chain.push_back(&s);
-                runHooks(s.before_all, "beforeAll");
-
-                for (const Test& t : s.tests) {
-                    if (!selected(join(fullName, t.name))) {
-                        ++skipped;
-                        continue;
-                    }
-                    runTest(t);
-                }
-                for (const auto& c : s.children) runSuite(*c, join(fullName, c->name));
-
-                runHooks(s.after_all, "afterAll");
-                chain.pop_back();
-                if (headingsPrinted > chain.size()) headingsPrinted = chain.size();
-            }
-
-        public:
-            explicit Runner(Options o) : opts(std::move(o)) {}
-
-            int run() {
-                if (!opts.pattern.empty()) {
-                    try {
-                        re = std::regex(opts.pattern);
-                        hasRe = true;
-                    } catch (const std::regex_error& e) {
-                        std::cerr << "Invalid --testNamePattern regex: " << e.what() << '\n';
-                        return 2;
-                    }
-                }
-
-                const auto start = Clock::now();
-                runSuite(root(), "");
+            int finish() {
                 const double secs = std::chrono::duration<double>(Clock::now() - start).count();
-
                 if (opts.verbose)
-                    out << '\n'; // failure blocks in quiet mode already end with a blank line
+                    out << '\n'; // failure blocks in quiet mode already end with blank line
 
                 out << "Tests:  "
                     << paint(RED, std::to_string(failed) + " failed") << ", "
@@ -792,6 +598,153 @@ namespace jest {
                     << ", " << (passed + failed + skipped) << " total\n"
                     << "Time:   " << std::fixed << std::setprecision(3) << secs << " s\n";
                 return failed ? 1 : 0;
+            }
+        };
+
+        // RAII: entering a describe block pushes a frame, leaving it pops (and runs afterAll hooks).
+        struct DescribeScope {
+            Frame frame;
+            explicit DescribeScope(const std::string& name) { frame.name = name; Runner::get().enter(&frame); }
+            ~DescribeScope() { Runner::get().leave(&frame); }
+            DescribeScope(const DescribeScope&) = delete;
+            DescribeScope& operator=(const DescribeScope&) = delete;
+        };
+
+        // 'TestRegistrar{"name"} = [&]() { ... };' -> runs the test right now (used by the it/test macros)
+        struct TestRegistrar {
+            std::string name;
+            int timeoutMs;
+            explicit TestRegistrar(std::string n, int timeout = -1) : name(std::move(n)), timeoutMs(timeout) {}
+            void operator=(const std::function<void()>& fn) const { Runner::get().runTest(name, fn, timeoutMs, false); }
+        };
+        struct HookRegistrar {
+            Hooks Frame::*slot;
+            void operator=(std::function<void()> fn) const { Runner::get().addHook(slot, std::move(fn)); }
+        };
+
+        // .each/.failing
+        struct Arg {
+            std::string raw, quoted;
+        };
+        template <class T>
+        Arg makeArg(const T& v) {
+            Arg a;
+            a.quoted = str(v);
+            if constexpr (StringLike<T>) a.raw = std::string(std::string_view(v));
+            else a.raw = a.quoted;
+            return a;
+        }
+
+        // printf-style titled: %s, %d, %i, %f (plain), %j %o %p (quoted), %# (row index), %$ (row number), etc
+        inline std::string formatTitle(const std::string& tpl, const std::vector<Arg>& args, std::size_t index) {
+            std::string out;
+            std::size_t next = 0;
+            for (std::size_t i = 0; i < tpl.size(); ++i) {
+                const char ch = tpl[i];
+                if (ch == '%' && i + 1 < tpl.size()) {
+                    const char k = tpl[i + 1];
+                    if (k == '%') { out += '%'; ++i; continue; }
+                    if (k == '#') { out += std::to_string(index); ++i; continue; }
+                    if (k == '$') { out += std::to_string(index + 1); ++i; continue; }
+                    if ((k == 's' || k == 'd' || k == 'i' || k == 'f' || k == 'j' || k == 'o' || k =='p') && next < args.size()) {
+                        const Arg& a = args[next++];
+                        out += (k == 'j' || k == 'o' || k == 'p') ? a.quoted : a.raw;
+                        ++i;
+                        continue;
+                    }
+                }
+                out += ch;
+            }
+            return out;
+        }
+
+        template <class Row>
+        std::vector<Arg> rowArgs(const Row& row) {
+            if constexpr (TupleLike<Row>)
+                return std::apply([](const auto&... e) { return std::vector<Arg>{makeArg(e)...}; }, row);
+            else return {makeArg(row)};
+        }
+        // tuple-like rows (tuple, pair, array) are spread into the callback's parameters
+        template <class F, class Row>
+        void callWithRow(F& f, const Row& row) {
+            if constexpr (TupleLike<Row>) std::apply(f, row);
+            else if constexpr (std::is_same_v<Row, char> && !std::is_invocable_v<F&, const Row&> && std::is_invocable_v<F&, std::string>)
+                f(std::string(1, row)); // for character literals
+            else f(row);
+        }
+
+        template <class Row>
+        class EachBinder {
+        private:
+            std::vector<Row> rows;
+            bool failing;
+
+        public:
+            EachBinder(std::vector<Row> r, bool fail) : rows(std::move(r)), failing(fail) {}
+            template <class F>
+            void operator()(const std::string& name, F&& fn, int timeoutMs = -1) const {
+                for (std::size_t i = 0; i < rows.size(); ++i) {
+                    Row row = rows[i];
+                    Runner::get().runTest(formatTitle(name, rowArgs(row), i), [&] { callWithRow(fn, row); }, timeoutMs, failing);
+                }
+            }
+        };
+
+        template <class Row>
+        class DescribeEachBinder {
+        private:
+            std::vector<Row> rows;
+
+        public:
+            DescribeEachBinder(std::vector<Row> r, bool) : rows(std::move(r)) {}
+            template <class F>
+            void operator()(const std::string& name, F&& fn, int /*timeoutMs, unsued*/ = -1) const {
+                for (std::size_t i = 0; i < rows.size(); ++i) {
+                    DescribeScope scope{formatTitle(name, rowArgs(rows[i]), i)};
+                    callWithRow(fn, rows[i]);
+                }
+            }
+        };
+
+        // {"a", "b"} gives const char* rows; store them as std::string so callbacks can take it
+        template <class T>
+        using RowOf = std::conditional_t<std::is_pointer_v<T> && std::is_same_v<std::remove_cv_t<std::remove_pointer_t<T>>, char>, std::string, T>;
+
+        template <template <class> class Binder>
+        struct EachFn {
+            bool failing;
+            template <class R>
+            requires Range<R> auto operator()(const R& rows) const {
+                using Row = RowOf<std::decay_t<decltype(*std::begin(rows))>>;
+                return Binder<Row>(std::vector<Row>(std::begin(rows), std::end(rows)), failing);
+            }
+            template <class T>
+            auto operator()(std::initializer_list<T> rows) const {
+                using Row = RowOf<T>;
+                return Binder<Row>(std::vector<Row>(rows.begin(), rows.end()), failing);
+            }
+        };
+
+        struct FailingApi {
+            EachFn<EachBinder> each{true};
+            void operator()(const std::string& name, const std::function<void()>& fn, int timeoutMs = -1) const {
+                Runner::get().runTest(name, fn, timeoutMs, true);
+            }
+        };
+
+        struct TestApi {
+            EachFn<EachBinder> each{false};
+            FailingApi failing{};
+            void operator()(const std::string& name, const std::function<void()>& fn, int timeoutMs = -1) const {
+                Runner::get().runTest(name, fn, timeoutMs, false);
+            }
+        };
+
+        struct DescribeApi {
+            EachFn<DescribeEachBinder> each{false};
+            void operator()(const std::string& name, const std::function<void()>& fn) const {
+                DescribeScope scope{name};
+                fn();
             }
         };
     }
@@ -815,15 +768,18 @@ namespace jest {
         return std::vector<std::tuple<Ts...>>(rows);
     }
 
-    // runs everything registered, pass main's argc/argv to enable the command line options
+    // call first thing in main, BEFORE the first describe/it
+    inline void init(int argc, char** argv) {
+        detail::Runner::get().init(argc, argv);
+    }
+
+    // runs everything registered and prints the summary
     // returns 0 if all tests passed, 1 if any failed, 2 for usage error
-    inline int run(int argc = 0, char** argv = nullptr) {
-        std::vector<std::string> args;
-        for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]);
-        detail::Options opts;
-        if (const char* nc = std::getenv("NO_COLOR"); nc && *nc) opts.color = false;
-        if (auto code = detail::parseArgs(args, argc > 0 ? argv[0] : "tests", opts)) return *code;
-        return detail::Runner(std::move(opts)).run();
+    inline int run() {
+        auto& r = detail::Runner::get();
+        if (!r.initialized())
+            std::cerr << "jest-cpp: command line options were ignored (used defaults); call jest::init(argc, argv) before the first describe/it\n";
+        return r.finish();
     }
 }
 
@@ -841,12 +797,12 @@ namespace jest {
 #define test(...) it(__VA_ARGS__)
 
 // beforeAll { ... };
-#define beforeAll ::jest::detail::HookRegistrar{&::jest::detail::Suite::before_all} = [&]()
+#define beforeAll ::jest::detail::HookRegistrar{&::jest::detail::Frame::before_all} = [&]()
 // afterAll { ... };
-#define afterAll ::jest::detail::HookRegistrar{&::jest::detail::Suite::after_all} = [&]()
+#define afterAll ::jest::detail::HookRegistrar{&::jest::detail::Frame::after_all} = [&]()
 // beforeEach { ... };
-#define beforeEach ::jest::detail::HookRegistrar{&::jest::detail::Suite::before_each} = [&]()
+#define beforeEach ::jest::detail::HookRegistrar{&::jest::detail::Frame::before_each} = [&]()
 // afterEach { ... };
-#define afterEach ::jest::detail::HookRegistrar{&::jest::detail::Suite::after_each} = [&]()
+#define afterEach ::jest::detail::HookRegistrar{&::jest::detail::Frame::after_each} = [&]()
 
 #endif
