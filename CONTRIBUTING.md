@@ -54,7 +54,7 @@ Please keep these in mind; they are why the library is pleasant to adopt.
 - **C++20** is the baseline. Don't require anything newer.
 - **Internals go in `jest::detail`.** Only things users are meant to call live in `jest`.
 - **Keep the macro surface tiny.** Macros exist only for the block syntax, are defined at the very bottom of the header. Don't add new ones lightly.
-- **Follow Jest's naming and behaviour** when there is a C++ equivalent, and document every place where we deliberately differ (see "Differences from Jest" in the README).
+- **Follow Jest's naming and behavior** when there is a C++ equivalent, and document every place where we deliberately differ (see "Differences from Jest" in the README).
 - **Failure messages matter.** A new matcher should say what it expected and what it received.
 - **Give helpful compile errors.** Prefer a `static_assert` with a message to a wall of template noise.
 
