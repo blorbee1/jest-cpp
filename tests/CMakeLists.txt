@@ -1,5 +1,11 @@
-add_executable(jest_cpp_tests main.cpp)
+add_executable(jest_cpp_self_test self_test.cpp)
+target_link_libraries(jest_cpp_self_test PRIVATE JestCpp::JestCpp)
+target_compile_options(jest_cpp_self_test PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Werror)
 
-target_link_libraries(jest_cpp_tests PRIVATE JestCpp::JestCpp)
+add_executable(jest_cpp_failing_demo failing_demo.cpp)
+target_link_libraries(jest_cpp_failing_demo PRIVATE JestCpp::JestCpp)
+target_compile_options(jest_cpp_failing_demo PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Werror)
 
-add_test(NAME jest_cpp_tests COMMAND jest_cpp_tests)
+add_test(NAME jest_cpp_self_test COMMAND jest_cpp_self_test)
+add_test(NAME jest_cpp_failing_demo COMMAND jest_cpp_failing_demo)
+set_tests_properties(jest_cpp_failing_demo PROPERTIES WILL_FAIL TRUE)
