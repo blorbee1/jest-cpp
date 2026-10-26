@@ -16,10 +16,9 @@ const sidebars = {
             items: ["matchers", "differences-from-jest"]
         },
         {
-            type: "category",
+            type: "doc",
             label: "Examples",
-            collapsible: false,
-            items: ["examples"]
+            id: "examples"
         }
     ]
 };
