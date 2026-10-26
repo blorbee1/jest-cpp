@@ -1,0 +1,26 @@
+name: Feature Proposal
+description: Submit a proposal for a new feature
+title: '[Feature]: '
+labels: ['feature']
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 'Feature Proposal'
+      description: A clear and concise description of what the feature is.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Motivation
+      description: Outline your motivation for the proposal. How will it make jest-cpp better?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Example
+      description: Describe how this feature would be used.
+    validations:
+      required: false

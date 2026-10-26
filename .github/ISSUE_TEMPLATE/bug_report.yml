@@ -1,0 +1,51 @@
+name: Bug Report
+description: Create a bug report
+title: '[Bug]: '
+labels: ['bug']
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: |
+        The version of jest-cpp you are using.
+        Is it the [latest](https://github.com/blorbee1/jest-cpp/releases)? Test and see if the bug has already been fixed.
+      placeholder: ex. 1.0.0
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Please link to a repository with a minimal reproduction and describe accurately how we can reproduce/verify the bug.
+      placeholder: |
+        Example steps (replace with your own):
+        1. Clone my repo at https://github.com/<myuser>/example
+        2. cmake --build build
+        3. Run binary
+        4. You should see the error come up
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: A description of what you expect to happen.
+      placeholder: I expect to see X or Y
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Actual behavior
+      description: A clear and concise description of the unexpected behavior.
+      placeholder: A bug happened!
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else that might be relevant
+    validations:
+      required: false
