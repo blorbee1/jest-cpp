@@ -56,9 +56,8 @@ const config = {
             navbar: {
                 title: "jest-cpp",
                 items: [
-                    {type: "docSidebar", sidebarId: "docs", position: "left", label: "Docs"},
-                    {to: "/docs/matchers", label: "Matchers", position: "left"},
-                    {to: "/docs/examples", label: "Examples", position: "left"},
+                    {type: "docSidebar", sidebarId: "docs", position: "right", label: "Docs"},
+                    {to: "docs/api", position: "right", label: "API"},
                     {"href": `https://github.com/${ORG}/${REPO}`, label: "GitHub", position: "right"}
                 ]
             },
@@ -69,7 +68,7 @@ const config = {
                         title: "Docs",
                         items: [
                             {label: "Getting started", to: "/docs/getting-started"},
-                            {label: "Matchers", to: "/docs/matchers"},
+                            {label: "API reference", to: "/docs/api"},
                             {label: "Differences from JestJS", to: "/docs/differences-from-jest"}
                         ]
                     },

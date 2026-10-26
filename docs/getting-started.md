@@ -6,7 +6,7 @@ jest-cpp is a single header unit testing library for C++20 with the syntax simil
 
 Requires **C++20** or later.
 
-Copy and drag [`jest-cpp.hpp`](https://github.com/blorbee1/jest-cpp/blob/main/include/jest-cpp.hpp) anywhere where you can include the file.
+Copy and drag [`jest-cpp.hpp`](https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp) anywhere where you can include the file.
 
 ```sh
 g++ -std=c++20 -I include tests.cpp -o tests && ./tests

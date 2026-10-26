@@ -70,6 +70,7 @@ function Hero() {
                 <div className={styles.buttons}>
                     <Link className="button button--secondary button--lg" to="/docs/getting-started">Getting Started</Link>
                     <Link className={clsx("button button--outline button--lg", styles.ghost)} to="/docs/matchers">Matchers</Link>
+                    <Link className={clsx("button button--outline button--lg", styles.ghost)} to="/docs/api">API Reference</Link>
                 </div>
             </div>
         </header>

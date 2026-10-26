@@ -8,7 +8,10 @@
         "start": "docusaurus start",
         "build": "docusaurus build",
         "serve": "docusaurus serve",
-        "clear": "docusaurus clear"
+        "clear": "docusaurus clear",
+        "generate-api": "doxygen Doxyfile && npm run replace-api-file-paths && npx moxygen -q --output ../docs/api.md doxygen/xml",
+        "build-with-api": "npm run generate-api && npm run build",
+        "replace-api-file-paths": "node replace_api_file_paths.js"
     },
     "browserslist": {
         "production": [
@@ -36,5 +39,8 @@
         "raw-loader": "^4.0.2",
         "react": "^19.3.1",
         "react-dom": "^19.3.1"
+    },
+    "devDependencies": {
+        "moxygen": "^2.2.2"
     }
 }
