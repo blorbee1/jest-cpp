@@ -28,5 +28,6 @@ First public version (to be released as 1.0.0).
 - Quiet output by default: failures and a summary only.
 - `JEST_NO_MACROS` to opt out of the block-syntax macros.
 - Examples, the library's own tests, and CI.
+- Documentation site
 
 [Unreleased]: https://github.com/blorbee1/jest-cpp/commits/master

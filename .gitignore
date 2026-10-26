@@ -34,3 +34,7 @@ cmake-build-*/
 *.exe
 *.out
 *.app
+
+# Node / Docusaurus
+node_modules/
+.docusaurus/
