@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-27
+
 ### Changed
 - Compile times: failure messages are now built only when an expectation fails (not on every `expect`), and tests run through a lightweight non owning callable reference instead of `std::function`
 - CI workflow now runs for multiple compilers
@@ -34,5 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Examples, the library's own tests, and CI.
 - Documentation site
 
-[Unreleased]: https://github.com/blorbee1/jest-cpp/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/blorbee1/jest-cpp/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/blorbee1/jest-cpp/releases/tag/v1.0.1
 [1.0.0]: https://github.com/blorbee1/jest-cpp/releases/tag/v1.0.0
