@@ -6,11 +6,15 @@ jest-cpp is a single header unit testing library for C++20 with the syntax simil
 
 Requires **C++20** or later.
 
-Copy and drag [`jest-cpp.hpp`](https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp) anywhere where you can include the file.
+### Copy the header
+
+Put [`jest-cpp.hpp`](https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp) anywhere in your include path.
 
 ```sh
 g++ -std=c++20 -I include tests.cpp -o tests && ./tests
 ```
+
+For faster compiles you can also copy [`jest-cpp.cpp`](https://github.com/blorbee1/jest-cpp/blob/master/src/jest-cpp.cpp) and compile it; see [Compile times](compile-times.md)
 
 ### CMake (FetchContent)
 
@@ -22,7 +26,7 @@ FetchContent_Declare(jest-cpp
 FetchContent_MakeAvailable(jest-cpp)
 
 add_executable(my_tests tests.cpp)
-target_link_libraries(my_tests PRIVATE jest-cpp::jest-cpp)
+target_link_libraries(my_tests PRIVATE JestCpp::JestCpp)
 ```
 
 ## Your first test

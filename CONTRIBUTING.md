@@ -85,8 +85,9 @@ Please keep these in mind; they are why the library is pleasant to adopt.
 ## Maintainers: making a release
 
 1. Make sure `master` is green.
-2. In the CHANGELOG, rename **Unreleased** to the new version with today's date and add a fresh empty **Unreleased** section above it. Update the comparison links at the bottom.
-3. Bump the version in `CMakeLists.txt` (`project(jest-cpp VERSION ...)`).
-4. Commit these through a pull request, then tag the merge commit `vX.Y.Z` and publish a GitHub Release using the CHANGELOG section as the notes.
+2. Run `npm run generate-api` in `/website/` to update the API reference to the latest.
+3. In the CHANGELOG, rename **Unreleased** to the new version with today's date and add a fresh empty **Unreleased** section above it. Update the comparison links at the bottom.
+4. Bump the version in `CMakeLists.txt` (`project(jest-cpp VERSION ...)`).
+5. Commit these through a pull request, then tag the merge commit `vX.Y.Z` and publish a GitHub Release using the CHANGELOG section as the notes.
 
 Versions follow [Semantic Versioning](https://semver.org/): a change to the public API that can break users' code is a major bump (or a minor one while the version is below 1.0).

@@ -6,6 +6,8 @@
 
 A single header unit testing library for C++20 with the syntax and feel of [Jest](https://jestjs.io/).
 
+[Documentation](https://blorbee1.github.io/jest-cpp/)
+
 ```cpp
 #include <jest-cpp.hpp>
 using namespace jest;
