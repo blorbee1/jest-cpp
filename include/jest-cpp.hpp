@@ -55,6 +55,30 @@
 #include <utility>
 #include <vector>
 
+/// @cond TURN_OFF_DOXYGEN
+
+// build configuration
+// optional separate compilation (much faster to compile) define JEST_CPP_SEPARATE for every file,
+// and define JEST_CPP_IMPLEMENTATION (then include this header) in exactly ONE .cpp file. without JEST_CPP_SEPARATE
+#if defined(JEST_CPP_SEPARATE)
+#define JEST_CPP_INLINE
+#else
+#define JEST_CPP_INLINE inline
+#ifndef JEST_CPP_IMPLEMENTATION
+#define JEST_CPP_IMPLEMENTATION
+#endif
+#endif
+
+#if defined(__GNUC__) || defined(__clang__)
+#define JEST_CPP_COLD __attribute__((cold, noinline))
+#elif defined(_MSC_VER)
+#define JEST_CPP_COLD __declspec(noinline)
+#else
+#define JEST_CPP_COLD
+#endif
+
+/// @endcond
+
 /**
  * @namespace jest
  * @brief Public API for the jest-cpp testing framework.
@@ -74,7 +98,7 @@ namespace jest {
          * @param src Regular expression pattern
          * @param f Regular expression syntax flags
          */
-        explicit Regex(std::string src, std::regex::flag_type f = std::regex::ECMAScript) : std::regex(src, f), source(std::move(src)) {}
+        explicit Regex(std::string src, std::regex::flag_type f = std::regex::ECMAScript);
     };
 
     inline namespace literals {
@@ -89,12 +113,18 @@ namespace jest {
          * jest::Regex pattern = "hello.*"_re;
          * @endcode
          */
-        inline Regex operator""_re(const char* s, std::size_t n) {
-            return Regex(std::string(s, n));
-        }
+        JEST_CPP_INLINE Regex operator""_re(const char* s, std::size_t n);
     }
 
     namespace detail {
+        /// @cond TURN_OFF_DOXYGEN
+
+        // std::regex is the most expensive thing in this header to compile, so non templated uses go through these functions
+        JEST_CPP_INLINE bool regexSearch(const std::string& text, const std::regex& re);
+        JEST_CPP_INLINE bool regexAssign(std::regex& out, const std::string& pattern, std::string& error);
+
+        /// @endcond
+
         /**
          * @struct ExpectationFailed
          * @brief Thrown to indicate that an expectation failed its conditions
@@ -236,21 +266,33 @@ namespace jest {
             else if constexpr (StringLike<T>) return !std::string_view(v).empty();
             else return true;
         }
-        /// @endcond
 
         // matchers
-        template <class T> 
-        struct Matchers {
-            const T& actual;
+        struct MatcherBase {
             bool negate;
-            
-            Matchers(const T& act, bool neg) : actual(act), negate(neg) {}
+            explicit MatcherBase(bool neg) : negate(neg) {}
+
+            [[noreturn]] JEST_CPP_COLD void fail(const std::string& matcher, const std::string& received) const {
+                throw ExpectationFailed(std::string("expect(received).") + (negate ? "never." : "") + matcher + "\n\tReceived: " + received);
+            }
+        };
+
+        /// @endcond
+
+        template <class T> 
+        struct Matchers : MatcherBase {
+            /// @cond TURN_OFF_DOXYGEN
+
+            const T& actual;
+            Matchers(const T& act, bool neg) : MatcherBase(neg), actual(act) {}
 
             void check(bool pass, const std::string& matcher, const std::string& received) const {
                 if (pass == negate) {
-                    throw ExpectationFailed(std::string("expect(received)") + (negate ? ".never." : ".") + matcher + "\n\tReceived: " + received);
+                    fail(matcher, received);
                 }
             }
+
+            /// @endcond
 
             // equality
 
@@ -433,7 +475,7 @@ namespace jest {
             void toMatch(const Regex& re) const {
                 static_assert(StringLike<T>, "toMatch needs a string");
                 const std::string s = std::string(std::string_view(actual));
-                check(std::regex_search(s, re), "toMatch(/" + re.source + "/)", str(actual));
+                check(regexSearch(s, re), "toMatch(/" + re.source + "/)", str(actual));
             }
 
             /**
@@ -444,7 +486,7 @@ namespace jest {
             void toMatch(const std::regex& re) const {
                 static_assert(StringLike<T>, "toMatch needs a string");
                 const std::string s = std::string(std::string_view(actual));
-                check(std::regex_search(s, re), "toMatch(<regex>)", str(actual));
+                check(regexSearch(s, re), "toMatch(<regex>)", str(actual));
             }
 
             /**
@@ -584,7 +626,22 @@ namespace jest {
             return out;
         }
 
+        // Runner class
         using Hooks = std::vector<std::function<void()>>;
+
+        // non owning reference to a callable
+        class FnRef {
+        private:
+            void* obj;
+            void (*call)(void*);
+
+        public:
+            template <class F> requires (!std::is_same_v<std::remove_cvref_t<F>, FnRef>)
+            FnRef(F&& f)
+                : obj(const_cast<void*>(static_cast<const void*>(std::addressof(f)))),
+                  call([](void* o) { (*static_cast<std::remove_reference_t<F>*>(o))(); }) {}
+            void operator()() const { call(obj); }
+        };
 
         struct Frame {
             std::string name;
@@ -668,11 +725,11 @@ namespace jest {
                 for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]);
                 if (auto code = parseArgs(args, argc > 0 ? argv[0] : "tests", opts)) std::exit(*code);
                 if (!opts.pattern.empty()) {
-                    try {
-                        re = std::regex(opts.pattern);
+                    std::string error;
+                    if (regexAssign(re, opts.pattern, error))
                         hasRe = true;
-                    } catch (const std::regex_error& e) {
-                        std::cerr << "Invalid --testNamePattern regex: " << e.what() << '\n';
+                    else {
+                        std::cerr << "Invalid --testNamePattern regex: " << error << '\n';
                         std::exit(2);
                     }
                 }
@@ -699,7 +756,7 @@ namespace jest {
                 for (std::size_t i = 1; i < chain.size(); ++i)
                     full += chain[i]->name + " ";
                 full += name;
-                if (hasRe && !std::regex_search(full, re)) {
+                if (hasRe && !regexSearch(full, re)) {
                     ++skipped;
                     return;
                 }
@@ -772,7 +829,7 @@ namespace jest {
             }
         };
 
-        // RAII: entering a describe block pushes a frame, leaving it pops (and runs afterAll hooks).
+        // entering a describe block pushes a frame, leaving it pops (and runs afterAll hooks).
         struct DescribeScope {
             Frame frame;
             explicit DescribeScope(const std::string& name) { frame.name = name; Runner::get().enter(&frame); }
@@ -786,7 +843,8 @@ namespace jest {
             std::string name;
             int timeoutMs;
             explicit TestRegistrar(std::string n, int timeout = -1) : name(std::move(n)), timeoutMs(timeout) {}
-            void operator=(const std::function<void()>& fn) const { Runner::get().runTest(name, fn, timeoutMs, false); }
+            template <class F> requires std::is_invocable_v<F&>
+            void operator=(F&& fn) const { Runner::get().runTest(name, FnRef(fn), timeoutMs, false); }
         };
         struct HookRegistrar {
             Hooks Frame::*slot;
@@ -901,7 +959,7 @@ namespace jest {
         struct FailingApi {
             EachFn<EachBinder> each{true};
             void operator()(const std::string& name, const std::function<void()>& fn, int timeoutMs = -1) const {
-                Runner::get().runTest(name, fn, timeoutMs, true);
+                Runner::get().runTest(name, FnRef(fn), timeoutMs, true);
             }
         };
 
@@ -909,7 +967,7 @@ namespace jest {
             EachFn<EachBinder> each{false};
             FailingApi failing{};
             void operator()(const std::string& name, const std::function<void()>& fn, int timeoutMs = -1) const {
-                Runner::get().runTest(name, fn, timeoutMs, false);
+                Runner::get().runTest(name, FnRef(fn), timeoutMs, false);
             }
         };
 
@@ -928,7 +986,7 @@ namespace jest {
      *
      * Supports ordinary tests, parameterized tests through .each(), and tests that are expected to fail through .failing().
      */
-    inline const detail::TestApi it{}, test{};
+    inline constexpr detail::TestApi it{}, test{};
 
     /**
      * @brief Defines a test suite or nested test group.
@@ -937,7 +995,7 @@ namespace jest {
      *
      * Supports parameterized suite definitions through .each().
      */
-    inline const detail::DescribeApi describe{};
+    inline constexpr detail::DescribeApi describe{};
 
     /**
      * @brief Creates an expectation for a value.
@@ -1021,6 +1079,36 @@ namespace jest {
         return r.finish();
     }
 }
+
+/// @cond TURN_OFF_DOXYGEN
+#ifdef JEST_CPP_IMPLEMENTATION
+namespace jest {
+    namespace detail {
+        JEST_CPP_INLINE bool regexSearch(const std::string& text, const std::regex& re) {
+            return std::regex_search(text, re);
+        }
+
+        JEST_CPP_INLINE bool regexAssign(std::regex& out, const std::string& pattern, std::string& error) {
+            try {
+                out = std::regex(pattern);
+                return true;
+            } catch (const std::regex_error& e) {
+                error = e.what();
+                return false;
+            }
+        }
+    }
+
+    JEST_CPP_INLINE Regex::Regex(std::string src, std::regex::flag_type f) : std::regex(src, f), source(std::move(src)) {}
+
+    inline namespace literals {
+        JEST_CPP_INLINE Regex operator""_re(const char* s, std::size_t n) {
+            return Regex(std::string(s, n));
+        }
+    }
+}
+#endif
+/// @endcond
 
 // define JEST_NO_MACROS before including to not define the macros
 #ifndef JEST_NO_MACROS
