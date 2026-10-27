@@ -56,8 +56,8 @@ const config = {
             navbar: {
                 title: "jest-cpp",
                 items: [
-                    {type: "docSidebar", sidebarId: "docs", position: "right", label: "Docs"},
-                    {to: "docs/api", position: "right", label: "API"},
+                    {type: "docSidebar", sidebarId: "docs", position: "left", label: "Docs"},
+                    {to: "docs/api", position: "left", label: "API"},
                     {"href": `https://github.com/${ORG}/${REPO}`, label: "GitHub", position: "right"}
                 ]
             },

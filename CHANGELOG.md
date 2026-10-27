@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Compile times: failure messages are now built only when an expectation fails (not on every `expect`), and tests run through a lightweight non owning callable reference instead of `std::function`
+- CI workflow now runs for multiple compilers
+
+### Added
+- Optional separate compilation: define `JEST_CPP_SEPARATE` everywhere and `JEST_CPP_IMPLEMENTATION` in one `.cpp` file (`src/jest-cpp.cpp`) to compile the `std::regex` parts once. This makes simple test files compile about 2.5x faster. The header still works on its own without it.
+- Documentation page on compile times
+
 ## [1.0.0] - 2026-10-26
 
 ### Added

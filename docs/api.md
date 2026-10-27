@@ -17,7 +17,7 @@
 #define describe(name) if (::jest::detail::DescribeScope JEST_CAT(jest_scope_, __COUNTER__){name}; true)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1048?:1048
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1136?:1136
 
 Declares a name test suite.
 
@@ -43,7 +43,7 @@ describe("math") {
 #define it(...) ::jest::detail::TestRegistrar{__VA_ARGS__} = [&]()
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1075?:1075
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1163?:1163
 
 Declares a test case.
 
@@ -75,7 +75,7 @@ it("name", 5000) {
 #define test(...) it(__VA_ARGS__)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1081?:1081
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1169?:1169
 
 Alias for `it`.
 
@@ -89,7 +89,7 @@ Alias for `it`.
 #define beforeAll ::jest::detail::HookRegistrar{&::jest::detail::Frame::before_all} = [&]()
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1093?:1093
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1181?:1181
 
 Code that is ran before all the test cases in a describe block.
 
@@ -109,7 +109,7 @@ beforeAll { counter = 0; };
 #define afterAll ::jest::detail::HookRegistrar{&::jest::detail::Frame::after_all} = [&]()
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1106?:1106
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1194?:1194
 
 Code that is ran after every test case in a describe block.
 
@@ -129,7 +129,7 @@ afterAll { cleanup(); };
 #define beforeEach ::jest::detail::HookRegistrar{&::jest::detail::Frame::before_each} = [&]()
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1118?:1118
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1206?:1206
 
 Code that is ran before each test case in a describe block.
 
@@ -149,7 +149,7 @@ beforeEach { counter = 0; };
 #define afterEach ::jest::detail::HookRegistrar{&::jest::detail::Frame::after_each} = [&]()
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1130?:1130
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1218?:1218
 
 Code that is ran after each test case in a describe block.
 
@@ -177,7 +177,7 @@ Public API for the jest-cpp testing framework.
 
 | Return | Name | Description |
 |--------|------|-------------|
-| [`Regex`](#regex) | [`operator""_re`](#operator_re) `inline` | Creates a [Regex](#regex) from a string literal. |
+| JEST_CPP_INLINE [`Regex`](#regex) | [`operator""_re`](#operator_re)  | Creates a [Regex](#regex) from a string literal. |
 | `auto` | [`expect`](#expect)  | Creates an expectation for a value. |
 | `std::vector< std::tuple< Ts... > >` | [`table`](#table)  | Creates a typed table of rows for parmeterized tests. |
 | `void` | [`init`](#init) `inline` | Initializes the test runner for command line arguments. |
@@ -187,13 +187,11 @@ Public API for the jest-cpp testing framework.
 
 #### operator""_re
 
-`inline`
-
 ```cpp
-inline Regex operator""_re(const char * s, std::size_t n)
+JEST_CPP_INLINE Regex operator""_re(const char * s, std::size_t n)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L92?:92
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L116?:116
 
 Creates a [Regex](#regex) from a string literal.
 
@@ -219,7 +217,7 @@ jest::Regex pattern = "hello.*"_re;
 template<class T> auto expect(T && value)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L959?:959
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1017?:1017
 
 Creates an expectation for a value.
 
@@ -249,7 +247,7 @@ expect("hello").toContain("ell");
 template<class... Ts> std::vector< std::tuple< Ts... > > table(std::initializer_list< std::tuple< Ts... > > rows)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L985?:985
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1043?:1043
 
 Creates a typed table of rows for parmeterized tests.
 
@@ -283,7 +281,7 @@ it.each(table<int, int, int>({
 inline void init(int argc, char ** argv)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1006?:1006
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1064?:1064
 
 Initializes the test runner for command line arguments.
 
@@ -319,7 +317,7 @@ Invalid arguments cause the process to exit with status of 2.
 inline int run()
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1017?:1017
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1075?:1075
 
 Prints the test summary and returns the test result.
 
@@ -335,19 +333,21 @@ If [init()](#init) was not called, the runner uses default options and prints a 
 
 | Return | Name | Description |
 |--------|------|-------------|
-| `const detail::TestApi` | [`it`](#it-1)  | Registers and executes a test case. |
-| `const detail::TestApi` | [`test`](#test-1)  |  |
-| `const detail::DescribeApi` | [`describe`](#describe-1)  | Defines a test suite or nested test group. |
+| `detail::TestApi` | [`it`](#it-1) `constexpr` | Registers and executes a test case. |
+| `detail::TestApi` | [`test`](#test-1)  |  |
+| `detail::DescribeApi` | [`describe`](#describe-1) `constexpr` | Defines a test suite or nested test group. |
 
 ---
 
 #### it
 
+`constexpr`
+
 ```cpp
-const detail::TestApi it {}
+detail::TestApi it {}
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L931?:931
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L989?:989
 
 Registers and executes a test case.
 
@@ -358,20 +358,22 @@ Supports ordinary tests, parameterized tests through .each(), and tests that are
 #### test
 
 ```cpp
-const detail::TestApi test {}
+detail::TestApi test {}
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L931?:931
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L989?:989
 
 ---
 
 #### describe
 
+`constexpr`
+
 ```cpp
-const detail::DescribeApi describe {}
+detail::DescribeApi describe {}
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L940?:940
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L998?:998
 
 Defines a test suite or nested test group.
 
@@ -391,7 +393,7 @@ Supports parameterized suite definitions through .each().
 struct Regex
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L68?:68
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L92?:92
 
 > **Inherits:** `regex`
 
@@ -413,25 +415,25 @@ Inherits from std::regex and stores the source pattern for use in assertion fail
 std::string source
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L70?:70
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L94?:94
 
 ### Public Methods
 
 | Return | Name | Description |
 |--------|------|-------------|
-|  | [`Regex`](#regex-1) `inline` `explicit` | Constructs a regular expression. |
+|  | [`Regex`](#regex-1) `explicit` | Constructs a regular expression. |
 
 ---
 
 #### Regex
 
-`inline` `explicit`
+`explicit`
 
 ```cpp
-inline explicit Regex(std::string src, std::regex::flag_type f = std::regex::ECMAScript)
+explicit Regex(std::string src, std::regex::flag_type f = std::regex::ECMAScript)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L77?:77
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L101?:101
 
 Constructs a regular expression.
 
@@ -473,7 +475,7 @@ Constructs a regular expression.
 using RowOf = std::conditional_t< std::is_pointer_v< T > &&std::is_same_v< std::remove_cv_t< std::remove_pointer_t< T > >, char >, std::string, T >
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L884?:884
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L942?:942
 
 
 
@@ -484,7 +486,7 @@ template<class Row>
 class EachBinder
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L850?:850
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L908?:908
 
 ### Public Methods
 
@@ -503,7 +505,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline EachBinder(std::vector< Row > r, bool fail)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L856?:856
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L914?:914
 
 ---
 
@@ -515,7 +517,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 template<class F> inline void operator()(const std::string & name, F && fn, int timeoutMs = -1) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L858?:858
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L916?:916
 
 ### Private Attributes
 
@@ -532,7 +534,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 std::vector< Row > rows
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L852?:852
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L910?:910
 
 ---
 
@@ -542,7 +544,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 bool failing
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L853?:853
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L911?:911
 
 
 
@@ -553,7 +555,7 @@ template<class Row>
 class DescribeEachBinder
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L867?:867
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L925?:925
 
 ### Public Methods
 
@@ -572,7 +574,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline DescribeEachBinder(std::vector< Row > r, bool)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L872?:872
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L930?:930
 
 ---
 
@@ -584,7 +586,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 template<class F> inline void operator()(const std::string & name, F && fn, int = -1) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L874?:874
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L932?:932
 
 ### Private Attributes
 
@@ -600,7 +602,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 std::vector< Row > rows
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L869?:869
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L927?:927
 
 
 
@@ -614,7 +616,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 struct ExpectationFailed
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L102?:102
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L132?:132
 
 > **Inherits:** `runtime_error`
 
@@ -629,41 +631,14 @@ template<class T>
 struct Matchers
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L243?:243
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L283?:283
 
-### Public Attributes
-
-| Return | Name | Description |
-|--------|------|-------------|
-| `const T &` | [`actual`](#actual)  |  |
-| `bool` | [`negate`](#negate)  |  |
-
----
-
-#### actual
-
-```cpp
-const T & actual
-```
-
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L244?:244
-
----
-
-#### negate
-
-```cpp
-bool negate
-```
-
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L245?:245
+> **Inherits:** `MatcherBase`
 
 ### Public Methods
 
 | Return | Name | Description |
 |--------|------|-------------|
-|  | [`Matchers`](#matchers-1) `inline` |  |
-| `void` | [`check`](#check) `const` `inline` |  |
 | `void` | [`toBe`](#tobe) `const` `inline` | Checks whether the actual value equals the expected value. |
 | `void` | [`toEqual`](#toequal) `const` `inline` | Performs deep equality. |
 | `void` | [`toBeTruthy`](#tobetruthy) `const` `inline` | Checks that the value is truthy. |
@@ -689,30 +664,6 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 
 ---
 
-#### Matchers
-
-`inline`
-
-```cpp
-inline Matchers(const T & act, bool neg)
-```
-
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L247?:247
-
----
-
-#### check
-
-`const` `inline`
-
-```cpp
-inline void check(bool pass, const std::string & matcher, const std::string & received) const
-```
-
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L249?:249
-
----
-
 #### toBe
 
 `const` `inline`
@@ -721,7 +672,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 template<class U> inline void toBe(const U & expected) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L268?:268
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L310?:310
 
 Checks whether the actual value equals the expected value.
 
@@ -749,7 +700,7 @@ Uses Object.is like semantics for floating point values, treating NaN as equal t
 template<class U> inline void toEqual(const U & expected) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L282?:282
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L324?:324
 
 Performs deep equality.
 
@@ -777,7 +728,7 @@ Deeply compares optionals by comparing their values, pointers are compared by va
 inline void toBeTruthy() const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L290?:290
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L332?:332
 
 Checks that the value is truthy.
 
@@ -797,7 +748,7 @@ Checks that the value is truthy.
 inline void toBeFalsy() const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L296?:296
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L338?:338
 
 Checks that the value is falsy.
 
@@ -817,7 +768,7 @@ Checks that the value is falsy.
 inline void toBeDefined() const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L304?:304
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L346?:346
 
 Checks that the value is considered defined.
 
@@ -839,7 +790,7 @@ Defined values only matter with std::optional and pointers, every other value is
 inline void toBeUndefined() const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L314?:314
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L356?:356
 
 Checks that the value is considered undefined.
 
@@ -861,7 +812,7 @@ Defined values only matter with std::optional and pointers, every other value is
 inline void toBeNull() const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L320?:320
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L362?:362
 
 Alias for toBeUndefined.
 
@@ -877,7 +828,7 @@ Alias for toBeUndefined.
 template<class U> inline void toBeGreaterThan(const U & expected) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L329?:329
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L371?:371
 
 Checks whether actual > expected.
 
@@ -903,7 +854,7 @@ Checks whether actual > expected.
 template<class U> inline void toBeGreaterThanOrEqual(const U & expected) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L340?:340
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L382?:382
 
 Checks whether actual >= expected.
 
@@ -929,7 +880,7 @@ Checks whether actual >= expected.
 template<class U> inline void toBeLessThan(const U & expected) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L351?:351
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L393?:393
 
 Checks whether actual < expected.
 
@@ -955,7 +906,7 @@ Checks whether actual < expected.
 template<class U> inline void toBeLessThanOrEqual(const U & expected) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L362?:362
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L404?:404
 
 Checks whether actual <= expected.
 
@@ -981,7 +932,7 @@ Checks whether actual <= expected.
 inline void toBeCloseTo(double expected, int digits = 2) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L372?:372
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L414?:414
 
 Checks whether a floating point number is close to an expected value.
 
@@ -1008,7 +959,7 @@ Checks whether a floating point number is close to an expected value.
 template<class U> inline void toContain(const U & item) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L391?:391
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L433?:433
 
 Checks whether a string contains a substring or a range contains an item.
 
@@ -1036,7 +987,7 @@ Ranges are anything that has std::begin/std::end defined
 inline void toHaveLength(size_t n) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L409?:409
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L451?:451
 
 Checks the length of a string or range.
 
@@ -1062,7 +1013,7 @@ Checks the length of a string or range.
 inline void toHaveLength(unsigned int n) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L415?:415
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L457?:457
 
 ---
 
@@ -1074,7 +1025,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline void toHaveLength(int n) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L422?:422
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L464?:464
 
 ##### Exceptions
 
@@ -1092,7 +1043,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline void toMatch(const Regex & re) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L433?:433
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L475?:475
 
 Checks whether a string contains a match for a regular expression.
 
@@ -1118,7 +1069,7 @@ Checks whether a string contains a match for a regular expression.
 inline void toMatch(const std::regex & re) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L444?:444
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L486?:486
 
 Checks whether a string contains a match for a standard regex.
 
@@ -1144,7 +1095,7 @@ Checks whether a string contains a match for a standard regex.
 inline void toMatch(const std::string & sub) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L455?:455
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L497?:497
 
 Checks whether a string contains the specifided substring.
 
@@ -1170,7 +1121,7 @@ Checks whether a string contains the specifided substring.
 inline void toMatch(const char * sub) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L459?:459
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L501?:501
 
 ---
 
@@ -1182,7 +1133,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline void toThrow() const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L467?:467
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L509?:509
 
 Checks whether a callable throws any exception.
 
@@ -1202,7 +1153,7 @@ Checks whether a callable throws any exception.
 inline void toThrow(const std::string & substr) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L482?:482
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L524?:524
 
 Checks whether a callable throws an exception whose message contains a substring.
 
@@ -1227,7 +1178,7 @@ template<template< class > class Binder>
 struct EachFn
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L887?:887
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L945?:945
 
 ### Public Attributes
 
@@ -1243,7 +1194,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 bool failing
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L888?:888
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L946?:946
 
 ### Public Methods
 
@@ -1262,7 +1213,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 template<class R> inline auto operator()(const R & rows) const requires Range<R>
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L890?:890
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L948?:948
 
 ---
 
@@ -1274,7 +1225,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 template<class T> inline auto operator()(std::initializer_list< T > rows) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L895?:895
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L953?:953
 
 
 
@@ -1284,7 +1235,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 struct FailingApi
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L901?:901
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L959?:959
 
 ### Public Attributes
 
@@ -1300,7 +1251,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 EachFn< EachBinder > each {true}
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L902?:902
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L960?:960
 
 ### Public Methods
 
@@ -1318,7 +1269,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline void operator()(const std::string & name, const std::function< void()> & fn, int timeoutMs = -1) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L903?:903
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L961?:961
 
 
 
@@ -1328,7 +1279,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 struct TestApi
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L908?:908
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L966?:966
 
 ### Public Attributes
 
@@ -1345,7 +1296,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 EachFn< EachBinder > each {false}
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L909?:909
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L967?:967
 
 ---
 
@@ -1355,7 +1306,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 FailingApi failing {}
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L910?:910
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L968?:968
 
 ### Public Methods
 
@@ -1373,7 +1324,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline void operator()(const std::string & name, const std::function< void()> & fn, int timeoutMs = -1) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L911?:911
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L969?:969
 
 
 
@@ -1383,7 +1334,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 struct DescribeApi
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L916?:916
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L974?:974
 
 ### Public Attributes
 
@@ -1399,7 +1350,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 EachFn< DescribeEachBinder > each {false}
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L917?:917
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L975?:975
 
 ### Public Methods
 
@@ -1417,6 +1368,6 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline void operator()(const std::string & name, const std::function< void()> & fn) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L918?:918
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L976?:976
 
 Generated by [Moxygen](https://0state.com/moxygen)

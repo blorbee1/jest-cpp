@@ -7,7 +7,7 @@ const sidebars = {
             type: "category",
             label: "Guide",
             collapsible: false,
-            items: ["getting-started", "writing-tests", "each", "failing-and-timeouts", "command-line"]
+            items: ["getting-started", "writing-tests", "each", "failing-and-timeouts", "command-line", "compile-times"]
         },
         {
             type: "category",
