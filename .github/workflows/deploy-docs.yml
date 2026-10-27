@@ -53,7 +53,7 @@ jobs:
 
   deploy-docs:
     if: github.event_name != 'pull_request'
-    needs: build
+    needs: build-docs
     runs-on: ubuntu-latest
 
     permissions:
