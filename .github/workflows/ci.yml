@@ -2,13 +2,55 @@ name: CI
 
 on:
   push:
-    branches: [master]
   pull_request:
     branches: [master]
 
+permissions:
+  contents: read
+
 jobs:
-  build-and-test:
-    name: Build and test
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { name: gcc-13, os: ubuntu-latest, cxx: g++-13 }
+          - { name: gcc-14, os: ubuntu-latest, cxx: g++-14 }
+          - { name: clang-18, os: ubuntu-latest, cxx: clang++-18 }
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "~4.2.0"
+
+      - name: Show CMake version
+        run: cmake --version
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
+          -DCMAKE_BUILD_TYPE=Debug
+          -DJEST_CPP_WARNINGS_AS_ERRORS=ON
+          -DJEST_CPP_BUILD_TESTS=ON
+          -DJEST_CPP_BUILD_EXAMPLES=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+  header-only:
+    # test library as plain header
+    name: header-only
     runs-on: ubuntu-latest
 
     steps:
@@ -26,6 +68,72 @@ jobs:
       - name: Configure
         run: >
           cmake -S . -B build
+          -DCMAKE_CXX_COMPILER=g++-13
+          -DCMAKE_BUILD_TYPE=Debug
+          -DJEST_CPP_WARNINGS_AS_ERRORS=ON
+          -DJEST_CPP_SEPARATE_COMPILATION=OFF
+          -DJEST_CPP_BUILD_TESTS=ON
+          -DJEST_CPP_BUILD_EXAMPLES=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+  sanitizers:
+    name: asan-ubsan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "~4.2.0"
+
+      - name: Show CMake version
+        run: cmake --version
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -DCMAKE_CXX_COMPILER=g++-13
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+          -DJEST_CPP_BUILD_TESTS=ON
+          -DJEST_CPP_BUILD_EXAMPLES=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+  msvc:
+    name: msvc (experimental)
+    runs-on: windows-latest
+    continue-on-error: true
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "~4.2.0"
+
+      - name: Show CMake version
+        run: cmake --version
+
+      - name: Configure
+        run: >
+          cmake -S . -B build
+          -DCMAKE_CXX_COMPILER=g++-13
+          -DCMAKE_BUILD_TYPE=Debug
           -DJEST_CPP_BUILD_TESTS=ON
           -DJEST_CPP_BUILD_EXAMPLES=ON
 
