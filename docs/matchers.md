@@ -108,3 +108,20 @@ expect([] {
     parse("not json");
 }).toThrow("unexpected token");
 ```
+
+## Mock matchers
+
+`toHave...` matcher functions work only on mocks made with `jest::fn`
+
+| Matcher | Passes when |
+|---|---|
+| `toHaveBeenCalled()` | the mock was called at least once |
+| `toHaveBeenCalledTimes(n)` | it was called exactly `n` times |
+| `toHaveBeenCalledWith(args...)` | **some** call had exactly these arguments |
+| `toHaveBeenLastCalledWith(args...)` | the **last** call had these arguments |
+| `toHaveBeenNthCalledWith(n, args...)` | call number `n` had these arguments (`n` starts at 1) |
+| `toHaveReturned()` | at least one call returned (didn't throw) |
+| `toHaveReturnedTimes(n)` | exactly `n` calls returned |
+| `toHaveReturnedWith(value)` | some call returned `value` |
+| `toHaveLastReturnedWith(value)` | the last call returned `value` |
+| `toHaveNthReturnedWith(n, value)` | call number `n` returned `value` |

@@ -87,5 +87,6 @@ Time:   0.002 s
 
 - [Writing tests](writing-tests.md): `describe`, `it`, and hooks
 - [Table-driven tests](each.md): `it.each` and `describe.each`
+- [Mock functions](mock-functions.md): fake dependencies and check how they were called
 - [Matchers](matchers.md): everything you can `expect`
 - [Examples](examples.mdx): complete, runnable programs

@@ -3,6 +3,7 @@ import basics from '!!raw-loader!@site/../examples/basics.cpp';
 import hooks from '!!raw-loader!@site/../examples/hooks.cpp';
 import eachAndFailing from '!!raw-loader!@site/../examples/each_and_failing.cpp';
 import matchers from '!!raw-loader!@site/../examples/matchers.cpp';
+import mocks from '!!raw-loader!@site/../examples/mocks.cpp';
 
 # Examples
 
@@ -39,3 +40,9 @@ Table driven tests and tests that are expected to fail.
 A tour of the matchers.
 
 <CodeBlock language="cpp" title="examples/matchers.cpp" showLineNumbers>{matchers}</CodeBlock>
+
+## Mock functions
+
+Testing code without its dependencies. `fn`, return values, and the `toHaveBeenCalled...` matchers. See [mock functions](mock-functions.md).
+
+<CodeBlock language="cpp" title="examples/mocks.cpp" showLineNumbers>{mocks}</CodeBlock>

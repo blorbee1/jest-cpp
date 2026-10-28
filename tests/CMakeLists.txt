@@ -2,10 +2,15 @@ add_executable(jest_cpp_self_test self_test.cpp)
 target_link_libraries(jest_cpp_self_test PRIVATE JestCpp::JestCpp)
 jest_cpp_enable_warnings(jest_cpp_self_test)
 
+add_executable(jest_cpp_mocks_test mocks.cpp)
+target_link_libraries(jest_cpp_mocks_test PRIVATE JestCpp::JestCpp)
+jest_cpp_enable_warnings(jest_cpp_mocks_test)
+
 add_executable(jest_cpp_failing_demo failing_demo.cpp)
 target_link_libraries(jest_cpp_failing_demo PRIVATE JestCpp::JestCpp)
 jest_cpp_enable_warnings(jest_cpp_failing_demo)
 
 add_test(NAME jest_cpp_self_test COMMAND jest_cpp_self_test)
+add_test(NAME jest_cpp_mocks_test COMMAND jest_cpp_mocks_test)
 add_test(NAME jest_cpp_failing_demo COMMAND jest_cpp_failing_demo)
 set_tests_properties(jest_cpp_failing_demo PROPERTIES WILL_FAIL TRUE)

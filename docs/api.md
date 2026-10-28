@@ -17,7 +17,7 @@
 #define describe(name) if (::jest::detail::DescribeScope JEST_CAT(jest_scope_, __COUNTER__){name}; true)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1136?:1136
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1792?:1792
 
 Declares a name test suite.
 
@@ -43,7 +43,7 @@ describe("math") {
 #define it(...) ::jest::detail::TestRegistrar{__VA_ARGS__} = [&]()
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1163?:1163
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1819?:1819
 
 Declares a test case.
 
@@ -75,7 +75,7 @@ it("name", 5000) {
 #define test(...) it(__VA_ARGS__)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1169?:1169
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1825?:1825
 
 Alias for `it`.
 
@@ -89,7 +89,7 @@ Alias for `it`.
 #define beforeAll ::jest::detail::HookRegistrar{&::jest::detail::Frame::before_all} = [&]()
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1181?:1181
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1837?:1837
 
 Code that is ran before all the test cases in a describe block.
 
@@ -109,7 +109,7 @@ beforeAll { counter = 0; };
 #define afterAll ::jest::detail::HookRegistrar{&::jest::detail::Frame::after_all} = [&]()
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1194?:1194
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1850?:1850
 
 Code that is ran after every test case in a describe block.
 
@@ -129,7 +129,7 @@ afterAll { cleanup(); };
 #define beforeEach ::jest::detail::HookRegistrar{&::jest::detail::Frame::before_each} = [&]()
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1206?:1206
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1862?:1862
 
 Code that is ran before each test case in a describe block.
 
@@ -149,7 +149,7 @@ beforeEach { counter = 0; };
 #define afterEach ::jest::detail::HookRegistrar{&::jest::detail::Frame::after_each} = [&]()
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1218?:1218
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1874?:1874
 
 Code that is ran after each test case in a describe block.
 
@@ -171,13 +171,45 @@ Public API for the jest-cpp testing framework.
 
 | Name | Description |
 |------|-------------|
+| [`Mock< R(Args...)>`](#mockrargs) | A function that records how it was called. Create one with [`jest::fn`](#fn). |
+| [`Anything`](#anything-1) | Placeholder that matches any single argument in the mock matchers. |
 | [`Regex`](#regex) | A regular expression that retains its original pattern. |
 
+### Enumerations
+
+| Name | Description |
+|------|-------------|
+| [`ResultType`](#resulttype)  | What happened in one one of a mock. |
+
+---
+
+#### ResultType
+
+```cpp
+enum ResultType
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L96?:96
+
+What happened in one one of a mock.
+
+Found in `mock.results[i].type`
+
+**See also**: Mock
+
+| Value | Description |
+|-------|-------------|
+| `INCOMPLETE` |  |
+| `RETURN` |  |
+| `THROW` |  |
 ### Functions
 
 | Return | Name | Description |
 |--------|------|-------------|
 | JEST_CPP_INLINE [`Regex`](#regex) | [`operator""_re`](#operator_re)  | Creates a [Regex](#regex) from a string literal. |
+| `Mock< Sig >` | [`fn`](#fn)  | Create a new mock function with no implementation. |
+| `Mock< Sig >` | [`fn`](#fn-1)  | Create a new mock function that runs an implementation function. |
+| `auto` | [`fn`](#fn-2)  | Create a new mock function that runs an implementation function, taking the signature from it. |
 | `auto` | [`expect`](#expect)  | Creates an expectation for a value. |
 | `std::vector< std::tuple< Ts... > >` | [`table`](#table)  | Creates a typed table of rows for parmeterized tests. |
 | `void` | [`init`](#init) `inline` | Initializes the test runner for command line arguments. |
@@ -191,7 +223,7 @@ Public API for the jest-cpp testing framework.
 JEST_CPP_INLINE Regex operator""_re(const char * s, std::size_t n)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L116?:116
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L149?:149
 
 Creates a [Regex](#regex) from a string literal.
 
@@ -211,13 +243,86 @@ jest::Regex pattern = "hello.*"_re;
 
 ---
 
+#### fn
+
+```cpp
+template<class Sig> Mock< Sig > fn()
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1582?:1582
+
+Create a new mock function with no implementation.
+
+Calling it records the call and returns a default value: `R{}` (nothing for `void`). Use mockReturnValue() or mockImplementation() to change what it does
+
+#### Returns
+The mock function
+
+```cpp
+auto charge = jest::fn<bool(double)>().mockReturnValue(true);
+```
+
+---
+
+#### fn
+
+```cpp
+template<class Sig, class F> Mock< Sig > fn(F && impl)
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1598?:1598
+
+Create a new mock function that runs an implementation function.
+
+#### Returns
+The mock function
+
+```cpp
+auto half = jest::fn<double(int>([](int x) { return x / 2.0; });
+```
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `impl` | `F &&` | What the mock does when it is called |
+
+---
+
+#### fn
+
+```cpp
+template<class F> auto fn(F && impl)
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1616?:1616
+
+Create a new mock function that runs an implementation function, taking the signature from it.
+
+Works with lamdas that aren't generic and with function pointers
+
+#### Returns
+The mock function
+
+```cpp
+auto add jest::fn([](int a, int b) { return a + b; });
+```
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `impl` | `F &&` | What the mock does when it is called |
+
+---
+
 #### expect
 
 ```cpp
 template<class T> auto expect(T && value)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1017?:1017
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1665?:1665
 
 Creates an expectation for a value.
 
@@ -247,7 +352,7 @@ expect("hello").toContain("ell");
 template<class... Ts> std::vector< std::tuple< Ts... > > table(std::initializer_list< std::tuple< Ts... > > rows)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1043?:1043
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1691?:1691
 
 Creates a typed table of rows for parmeterized tests.
 
@@ -281,7 +386,7 @@ it.each(table<int, int, int>({
 inline void init(int argc, char ** argv)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1064?:1064
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1712?:1712
 
 Initializes the test runner for command line arguments.
 
@@ -317,7 +422,7 @@ Invalid arguments cause the process to exit with status of 2.
 inline int run()
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1075?:1075
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1723?:1723
 
 Prints the test summary and returns the test result.
 
@@ -333,9 +438,33 @@ If [init()](#init) was not called, the runner uses default options and prints a 
 
 | Return | Name | Description |
 |--------|------|-------------|
+| [`Anything`](#anything-1) | [`anything`](#anything) `constexpr` | Matches any single argument in the mock matchers. |
 | `detail::TestApi` | [`it`](#it-1) `constexpr` | Registers and executes a test case. |
 | `detail::TestApi` | [`test`](#test-1)  |  |
 | `detail::DescribeApi` | [`describe`](#describe-1) `constexpr` | Defines a test suite or nested test group. |
+
+---
+
+#### anything
+
+`constexpr`
+
+```cpp
+Anything anything {}
+```
+
+Type: [`Anything`](#anything-1)
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1630?:1630
+
+Matches any single argument in the mock matchers.
+
+Use it for the arguments you don't care about
+
+```cpp
+expect(log).toHaveBeenCalledWith(3, anything);
+expect(log).toHaveBeenCalledWith(anything, "x");
+```
 
 ---
 
@@ -347,7 +476,7 @@ If [init()](#init) was not called, the runner uses default options and prints a 
 detail::TestApi it {}
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L989?:989
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1637?:1637
 
 Registers and executes a test case.
 
@@ -361,7 +490,7 @@ Supports ordinary tests, parameterized tests through .each(), and tests that are
 detail::TestApi test {}
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L989?:989
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1637?:1637
 
 ---
 
@@ -373,13 +502,275 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 detail::DescribeApi describe {}
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L998?:998
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1646?:1646
 
 Defines a test suite or nested test group.
 
 Groups tests under a descriptive name. Suites can register lifecycle hooks and contain nested suites.
 
 Supports parameterized suite definitions through .each().
+
+
+
+## Mock< R(Args...)>
+
+```cpp
+#include <jest-cpp.hpp>
+```
+
+```cpp
+template<class R, class... Args>
+class Mock< R(Args...)>
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1386?:1386
+
+A function that records how it was called. Create one with [`jest::fn`](#fn).
+
+A Mock is a cheap handle onto a shared state, copying it (for example into a std::function) keeps recording into the same place, so the original handle sees every call
+
+Not thread-safe
+
+#### Template Parameters
+* `R` Type of the return value 
+
+* `Args` Type of the arguments
+
+### Private Attributes
+
+| Return | Name | Description |
+|--------|------|-------------|
+| `const Data &` | [`mock`](#mock)  | The record of everything that happened to this mock. |
+
+---
+
+#### mock
+
+```cpp
+const Data & mock
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1430?:1430
+
+The record of everything that happened to this mock.
+
+* `mock.calls`: one tuple of arguments per call, in order
+* `mock.results`: one entry per call, in order, with
+  * `type`: a [ResultType](#resulttype)
+  * `value`: a `std::optional` holding the return value (empty for `void`)
+  * `error`: the `std::exception_ptr` of the exception, if the call threw
+
+```cpp
+auto m = jest::fn<int(int)>().mockReturnValue(7);
+m(5);
+std::get<0>(m.mock.calls[0]); // 5
+m.mock.results[0].value; // Optional(7)
+```
+
+### Private Methods
+
+| Return | Name | Description |
+|--------|------|-------------|
+| `R` | [`operator()`](#operator) `const` `inline` | Calls the mock, records the call, then runs the next once-implementation, or the implementation, or returns `R{}` (or throws if `R` has no default constructor. |
+| `Mock` | [`mockImplementation`](#mockimplementation) `const` `inline` | Sets what the mock does from now on. |
+| `Mock` | [`mockImplementationOnce`](#mockimplementationonce) `const` `inline` | Sets what the next call does (once). Several can be queued, they are used in order. |
+| `Mock` | [`mockReturnValue`](#mockreturnvalue) `const` `inline` `requires (!std::is_void_v<V>)` | Makes the mock return `v` from now on. |
+| `Mock` | [`mockReturnValueOnce`](#mockreturnvalueonce) `const` `inline` `requires (!std::is_void_v<V>)` | Makes the mock return `v` (once). Several can be queued, they are used in order. |
+| `Mock` | [`mockClear`](#mockclear) `const` `inline` | Forgets the recorded calls and results, keeps the implementations. |
+| `Mock` | [`mockReset`](#mockreset) `const` `inline` | Calls `mockClear()` but also goes back to the implementation give to [jest::fn](#fn) (or to none). |
+| `Mock` | [`mockName`](#mockname) `const` `inline` | Names the mock in failure messages (defaults to "jest.fn()"). |
+
+---
+
+#### operator()
+
+`const` `inline`
+
+```cpp
+inline R operator()(Args... args) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1450?:1450
+
+Calls the mock, records the call, then runs the next once-implementation, or the implementation, or returns `R{}` (or throws if `R` has no default constructor.
+
+#### Returns
+The value that got returned from the call, if not void
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `args` | `Args...` | The arguments to pass |
+
+---
+
+#### mockImplementation
+
+`const` `inline`
+
+```cpp
+inline Mock mockImplementation(Impl f) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1488?:1488
+
+Sets what the mock does from now on.
+
+#### Returns
+Itself
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `f` | `Impl` | Function to call |
+
+---
+
+#### mockImplementationOnce
+
+`const` `inline`
+
+```cpp
+inline Mock mockImplementationOnce(Impl f) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1499?:1499
+
+Sets what the next call does (once). Several can be queued, they are used in order.
+
+#### Returns
+Itself
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `f` | `Impl` | Function to call |
+
+---
+
+#### mockReturnValue
+
+`const` `inline` `requires (!std::is_void_v<V>)`
+
+```cpp
+template<class V = R> inline Mock mockReturnValue(std::type_identity_t< V > v) const requires (!std::is_void_v<V>)
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1512?:1512
+
+Makes the mock return `v` from now on.
+
+#### Returns
+Itself
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `v` | `std::type_identity_t< V >` | Value to return |
+
+---
+
+#### mockReturnValueOnce
+
+`const` `inline` `requires (!std::is_void_v<V>)`
+
+```cpp
+template<class V = R> inline Mock mockReturnValueOnce(std::type_identity_t< V > v) const requires (!std::is_void_v<V>)
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1525?:1525
+
+Makes the mock return `v` (once). Several can be queued, they are used in order.
+
+#### Returns
+Itself
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `v` | `std::type_identity_t< V >` | Value to return |
+
+---
+
+#### mockClear
+
+`const` `inline`
+
+```cpp
+inline Mock mockClear() const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1534?:1534
+
+Forgets the recorded calls and results, keeps the implementations.
+
+#### Returns
+Itself
+
+---
+
+#### mockReset
+
+`const` `inline`
+
+```cpp
+inline Mock mockReset() const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1544?:1544
+
+Calls `mockClear()` but also goes back to the implementation give to [jest::fn](#fn) (or to none).
+
+#### Returns
+Itself
+
+---
+
+#### mockName
+
+`const` `inline`
+
+```cpp
+inline Mock mockName(std::string name) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1557?:1557
+
+Names the mock in failure messages (defaults to "jest.fn()").
+
+#### Returns
+Itself
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `std::string` | Name to give |
+
+
+
+## Anything
+
+```cpp
+#include <jest-cpp.hpp>
+```
+
+```cpp
+struct Anything
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L109?:109
+
+Placeholder that matches any single argument in the mock matchers.
+
+Use the ready made object [jest::anything](#anything) rather than creating one
+
+**See also**: [anything](#anything)
 
 
 
@@ -393,7 +784,7 @@ Supports parameterized suite definitions through .each().
 struct Regex
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L92?:92
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L125?:125
 
 > **Inherits:** `regex`
 
@@ -415,7 +806,7 @@ Inherits from std::regex and stores the source pattern for use in assertion fail
 std::string source
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L94?:94
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L127?:127
 
 ### Public Methods
 
@@ -433,7 +824,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 explicit Regex(std::string src, std::regex::flag_type f = std::regex::ECMAScript)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L101?:101
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L134?:134
 
 Constructs a regular expression.
 
@@ -475,7 +866,7 @@ Constructs a regular expression.
 using RowOf = std::conditional_t< std::is_pointer_v< T > &&std::is_same_v< std::remove_cv_t< std::remove_pointer_t< T > >, char >, std::string, T >
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L942?:942
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1331?:1331
 
 
 
@@ -486,14 +877,14 @@ template<class Row>
 class EachBinder
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L908?:908
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1297?:1297
 
 ### Public Methods
 
 | Return | Name | Description |
 |--------|------|-------------|
 |  | [`EachBinder`](#eachbinder-1) `inline` |  |
-| `void` | [`operator()`](#operator) `const` `inline` |  |
+| `void` | [`operator()`](#operator-1) `const` `inline` |  |
 
 ---
 
@@ -505,7 +896,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline EachBinder(std::vector< Row > r, bool fail)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L914?:914
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1303?:1303
 
 ---
 
@@ -517,7 +908,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 template<class F> inline void operator()(const std::string & name, F && fn, int timeoutMs = -1) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L916?:916
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1305?:1305
 
 ### Private Attributes
 
@@ -534,7 +925,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 std::vector< Row > rows
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L910?:910
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1299?:1299
 
 ---
 
@@ -544,7 +935,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 bool failing
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L911?:911
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1300?:1300
 
 
 
@@ -555,14 +946,14 @@ template<class Row>
 class DescribeEachBinder
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L925?:925
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1314?:1314
 
 ### Public Methods
 
 | Return | Name | Description |
 |--------|------|-------------|
 |  | [`DescribeEachBinder`](#describeeachbinder-1) `inline` |  |
-| `void` | [`operator()`](#operator-1) `const` `inline` |  |
+| `void` | [`operator()`](#operator-2) `const` `inline` |  |
 
 ---
 
@@ -574,7 +965,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline DescribeEachBinder(std::vector< Row > r, bool)
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L930?:930
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1319?:1319
 
 ---
 
@@ -586,7 +977,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 template<class F> inline void operator()(const std::string & name, F && fn, int = -1) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L932?:932
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1321?:1321
 
 ### Private Attributes
 
@@ -602,7 +993,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 std::vector< Row > rows
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L927?:927
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1316?:1316
 
 
 
@@ -616,7 +1007,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 struct ExpectationFailed
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L132?:132
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L165?:165
 
 > **Inherits:** `runtime_error`
 
@@ -631,7 +1022,7 @@ template<class T>
 struct Matchers
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L283?:283
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L428?:428
 
 > **Inherits:** `MatcherBase`
 
@@ -661,6 +1052,24 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 | `void` | [`toMatch`](#tomatch-3) `const` `inline` |  |
 | `void` | [`toThrow`](#tothrow) `const` `inline` | Checks whether a callable throws any exception. |
 | `void` | [`toThrow`](#tothrow-1) `const` `inline` | Checks whether a callable throws an exception whose message contains a substring. |
+| `void` | [`toHaveBeenCalled`](#tohavebeencalled) `const` `inline` | Checks that the mock was called at least once. |
+| `void` | [`toHaveBeenCalledTimes`](#tohavebeencalledtimes) `const` `inline` | Checks that the mock was called exactly `n` times. |
+| `void` | [`toHaveBeenCalledTimes`](#tohavebeencalledtimes-1) `const` `inline` |  |
+| `void` | [`toHaveBeenCalledTimes`](#tohavebeencalledtimes-2) `const` `inline` |  |
+| `void` | [`toHaveBeenCalledWith`](#tohavebeencalledwith) `const` `inline` | Checks that at least one call received has exactly these arguments. |
+| `void` | [`toHaveBeenLastCalledWith`](#tohavebeenlastcalledwith) `const` `inline` | Checks that the last call received has exactly these arguments. |
+| `void` | [`toHaveBeenNthCalledWith`](#tohavebeennthcalledwith) `const` `inline` | Checks that call number `n` received exactly these arguments. |
+| `void` | [`toHaveBeenNthCalledWith`](#tohavebeennthcalledwith-1) `const` `inline` |  |
+| `void` | [`toHaveBeenNthCalledWith`](#tohavebeennthcalledwith-2) `const` `inline` |  |
+| `void` | [`toHaveReturned`](#tohavereturned) `const` `inline` | Checks that the mock returned at least once. |
+| `void` | [`toHaveReturnedTimes`](#tohavereturnedtimes) `const` `inline` | Checks that the mock returned exactly `n` times. |
+| `void` | [`toHaveReturnedTimes`](#tohavereturnedtimes-1) `const` `inline` |  |
+| `void` | [`toHaveReturnedTimes`](#tohavereturnedtimes-2) `const` `inline` |  |
+| `void` | [`toHaveReturnedWith`](#tohavereturnedwith) `const` `inline` | Checks that at least one call returned `value`. |
+| `void` | [`toHaveLastReturnedWith`](#tohavelastreturnedwith) `const` `inline` | Checks that the last call returned `value`. |
+| `void` | [`toHaveNthReturnedWith`](#tohaventhreturnedwith) `const` `inline` | Checks that call number `n` returned `value`. |
+| `void` | [`toHaveNthReturnedWith`](#tohaventhreturnedwith-1) `const` `inline` |  |
+| `void` | [`toHaveNthReturnedWith`](#tohaventhreturnedwith-2) `const` `inline` |  |
 
 ---
 
@@ -672,7 +1081,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 template<class U> inline void toBe(const U & expected) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L310?:310
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L455?:455
 
 Checks whether the actual value equals the expected value.
 
@@ -700,7 +1109,7 @@ Uses Object.is like semantics for floating point values, treating NaN as equal t
 template<class U> inline void toEqual(const U & expected) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L324?:324
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L469?:469
 
 Performs deep equality.
 
@@ -728,7 +1137,7 @@ Deeply compares optionals by comparing their values, pointers are compared by va
 inline void toBeTruthy() const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L332?:332
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L477?:477
 
 Checks that the value is truthy.
 
@@ -748,7 +1157,7 @@ Checks that the value is truthy.
 inline void toBeFalsy() const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L338?:338
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L483?:483
 
 Checks that the value is falsy.
 
@@ -768,7 +1177,7 @@ Checks that the value is falsy.
 inline void toBeDefined() const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L346?:346
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L491?:491
 
 Checks that the value is considered defined.
 
@@ -790,7 +1199,7 @@ Defined values only matter with std::optional and pointers, every other value is
 inline void toBeUndefined() const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L356?:356
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L501?:501
 
 Checks that the value is considered undefined.
 
@@ -812,7 +1221,7 @@ Defined values only matter with std::optional and pointers, every other value is
 inline void toBeNull() const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L362?:362
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L507?:507
 
 Alias for toBeUndefined.
 
@@ -828,7 +1237,7 @@ Alias for toBeUndefined.
 template<class U> inline void toBeGreaterThan(const U & expected) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L371?:371
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L516?:516
 
 Checks whether actual > expected.
 
@@ -854,7 +1263,7 @@ Checks whether actual > expected.
 template<class U> inline void toBeGreaterThanOrEqual(const U & expected) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L382?:382
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L527?:527
 
 Checks whether actual >= expected.
 
@@ -880,7 +1289,7 @@ Checks whether actual >= expected.
 template<class U> inline void toBeLessThan(const U & expected) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L393?:393
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L538?:538
 
 Checks whether actual < expected.
 
@@ -906,7 +1315,7 @@ Checks whether actual < expected.
 template<class U> inline void toBeLessThanOrEqual(const U & expected) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L404?:404
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L549?:549
 
 Checks whether actual <= expected.
 
@@ -932,7 +1341,7 @@ Checks whether actual <= expected.
 inline void toBeCloseTo(double expected, int digits = 2) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L414?:414
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L559?:559
 
 Checks whether a floating point number is close to an expected value.
 
@@ -959,7 +1368,7 @@ Checks whether a floating point number is close to an expected value.
 template<class U> inline void toContain(const U & item) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L433?:433
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L578?:578
 
 Checks whether a string contains a substring or a range contains an item.
 
@@ -987,7 +1396,7 @@ Ranges are anything that has std::begin/std::end defined
 inline void toHaveLength(size_t n) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L451?:451
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L596?:596
 
 Checks the length of a string or range.
 
@@ -1013,7 +1422,7 @@ Checks the length of a string or range.
 inline void toHaveLength(unsigned int n) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L457?:457
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L602?:602
 
 ---
 
@@ -1025,7 +1434,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline void toHaveLength(int n) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L464?:464
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L609?:609
 
 ##### Exceptions
 
@@ -1043,7 +1452,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline void toMatch(const Regex & re) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L475?:475
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L620?:620
 
 Checks whether a string contains a match for a regular expression.
 
@@ -1069,7 +1478,7 @@ Checks whether a string contains a match for a regular expression.
 inline void toMatch(const std::regex & re) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L486?:486
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L631?:631
 
 Checks whether a string contains a match for a standard regex.
 
@@ -1095,7 +1504,7 @@ Checks whether a string contains a match for a standard regex.
 inline void toMatch(const std::string & sub) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L497?:497
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L642?:642
 
 Checks whether a string contains the specifided substring.
 
@@ -1121,7 +1530,7 @@ Checks whether a string contains the specifided substring.
 inline void toMatch(const char * sub) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L501?:501
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L646?:646
 
 ---
 
@@ -1133,7 +1542,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline void toThrow() const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L509?:509
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L654?:654
 
 Checks whether a callable throws any exception.
 
@@ -1153,7 +1562,7 @@ Checks whether a callable throws any exception.
 inline void toThrow(const std::string & substr) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L524?:524
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L669?:669
 
 Checks whether a callable throws an exception whose message contains a substring.
 
@@ -1169,6 +1578,407 @@ Checks whether a callable throws an exception whose message contains a substring
 |-----------|-------------|
 | `detail::ExpectationFailed` | If the callable does not throw a matching exception. |
 
+---
+
+#### toHaveBeenCalled
+
+`const` `inline`
+
+```cpp
+inline void toHaveBeenCalled() const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L693?:693
+
+Checks that the mock was called at least once.
+
+```cpp
+expect(notify).toHaveBeenCalled();
+```
+
+##### Exceptions
+
+| Exception | Description |
+|-----------|-------------|
+| `detail::ExpectationFailed` | If the mock was never called |
+
+---
+
+#### toHaveBeenCalledTimes
+
+`const` `inline`
+
+```cpp
+inline void toHaveBeenCalledTimes(std::size_t n) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L707?:707
+
+Checks that the mock was called exactly `n` times.
+
+```cpp
+expect(charge).toHaveBeenCalledTimes(2);
+```
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `n` | `std::size_t` | Expected number of calls |
+
+##### Exceptions
+
+| Exception | Description |
+|-----------|-------------|
+| `detail::ExpectationFailed` | If it was called a different number of times |
+
+---
+
+#### toHaveBeenCalledTimes
+
+`const` `inline`
+
+```cpp
+inline void toHaveBeenCalledTimes(unsigned int n) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L711?:711
+
+---
+
+#### toHaveBeenCalledTimes
+
+`const` `inline`
+
+```cpp
+inline void toHaveBeenCalledTimes(int n) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L714?:714
+
+---
+
+#### toHaveBeenCalledWith
+
+`const` `inline`
+
+```cpp
+template<class... E> inline void toHaveBeenCalledWith(const E &... expected) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L737?:737
+
+Checks that at least one call received has exactly these arguments.
+
+Arguments are compared like toEqual(), and [jest::anything](#anything) matches any value. The number of expected arguments must match the mock's parameters; this is checked when you compile
+
+```cpp
+expect(charge).toHaveBeenCalledWith(49.99);
+expect(log).toHaveBeenCalledWith(3, anything);
+```
+
+**See also**: toHaveBeenLastCalledWith, toHaveBeenNthCalledWith
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `expected` | `const E &...` | The expected arguments |
+
+##### Exceptions
+
+| Exception | Description |
+|-----------|-------------|
+| `detail::ExpectationFailed` | If not call matches |
+
+---
+
+#### toHaveBeenLastCalledWith
+
+`const` `inline`
+
+```cpp
+template<class... E> inline void toHaveBeenLastCalledWith(const E &... expected) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L761?:761
+
+Checks that the last call received has exactly these arguments.
+
+Arguments are compared like toEqual(), and [jest::anything](#anything) matches any value
+
+**See also**: toHaveBeenCalledWith, toHaveBeenNthCalledWith
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `expected` | `const E &...` | The expected arguments |
+
+##### Exceptions
+
+| Exception | Description |
+|-----------|-------------|
+| `detail::ExpectationFailed` | If the mock was never called, or its last call doesn't match |
+
+---
+
+#### toHaveBeenNthCalledWith
+
+`const` `inline`
+
+```cpp
+template<class... E> inline void toHaveBeenNthCalledWith(std::size_t n, const E &... expected) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L785?:785
+
+Checks that call number `n` received exactly these arguments.
+
+Calls are counted from 1
+
+```cpp
+expect(notify).toHaveBeenNthCalledWith(1, "started");
+```
+
+**See also**: toHaveBeenCalledWith, toHaveBeenLastCalledWith
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `n` | `std::size_t` | Number of the call, starting at 1 |
+| `expected` | `const E &...` | The expected arguments |
+
+##### Exceptions
+
+| Exception | Description |
+|-----------|-------------|
+| `detail::ExpectationFailed` | If there is no such call, or it doesn't match |
+
+---
+
+#### toHaveBeenNthCalledWith
+
+`const` `inline`
+
+```cpp
+template<class... E> inline void toHaveBeenNthCalledWith(unsigned int n, const E &... expected) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L792?:792
+
+---
+
+#### toHaveBeenNthCalledWith
+
+`const` `inline`
+
+```cpp
+template<class... E> inline void toHaveBeenNthCalledWith(int n, const E &... expected) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L796?:796
+
+---
+
+#### toHaveReturned
+
+`const` `inline`
+
+```cpp
+inline void toHaveReturned() const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L809?:809
+
+Checks that the mock returned at least once.
+
+"Returned" means the call finished without throwing
+
+##### Exceptions
+
+| Exception | Description |
+|-----------|-------------|
+| `detail::ExpectationFailed` | If no call returned |
+
+---
+
+#### toHaveReturnedTimes
+
+`const` `inline`
+
+```cpp
+inline void toHaveReturnedTimes(std::size_t n) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L826?:826
+
+Checks that the mock returned exactly `n` times.
+
+"Returned" means the call finished without throwing
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `n` | `std::size_t` | Expected number of returns |
+
+##### Exceptions
+
+| Exception | Description |
+|-----------|-------------|
+| `detail::ExpectationFailed` | If the count differs |
+
+---
+
+#### toHaveReturnedTimes
+
+`const` `inline`
+
+```cpp
+inline void toHaveReturnedTimes(unsigned int n) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L835?:835
+
+---
+
+#### toHaveReturnedTimes
+
+`const` `inline`
+
+```cpp
+inline void toHaveReturnedTimes(int n) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L838?:838
+
+---
+
+#### toHaveReturnedWith
+
+`const` `inline`
+
+```cpp
+template<class V> inline void toHaveReturnedWith(const V & value) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L862?:862
+
+Checks that at least one call returned `value`.
+
+The value is compared like toEqual(). The mock must not return `void`
+
+"Returned" means the call finished without throwing
+
+```cpp
+expect(charge).toHaveReturnedWith(true);
+```
+
+**See also**: toHaveLastReturnedWith, toHaveNthReturnedWith
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `const V &` | The expected return value |
+
+##### Exceptions
+
+| Exception | Description |
+|-----------|-------------|
+| `detail::ExpectationFailed` | If no call returned that value |
+
+---
+
+#### toHaveLastReturnedWith
+
+`const` `inline`
+
+```cpp
+template<class V> inline void toHaveLastReturnedWith(const V & value) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L886?:886
+
+Checks that the last call returned `value`.
+
+The value is compared like toEqual(). A last call that threw doesn't match. The mock must not return `void`
+
+"Returned" means the call finished without throwing
+
+**See also**: toHaveReturnedWith, toHaveNthReturnedWith
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `const V &` | The expected return value |
+
+##### Exceptions
+
+| Exception | Description |
+|-----------|-------------|
+| `detail::ExpectationFailed` | If the last call didn't return that value |
+
+---
+
+#### toHaveNthReturnedWith
+
+`const` `inline`
+
+```cpp
+template<class V> inline void toHaveNthReturnedWith(std::size_t n, const V & value) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L909?:909
+
+Checks that call number `n` returned `value`.
+
+Calls are counted from 1. The value is compared like toEqual(). The mock must not return `void`
+
+"Returned" means the call finished without throwing
+
+**See also**: toHaveLastReturnedWith, toHaveReturnedWith
+
+##### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `n` | `std::size_t` | Number of the call, starting at 1 |
+| `value` | `const V &` | The expected return value |
+
+##### Exceptions
+
+| Exception | Description |
+|-----------|-------------|
+| `detail::ExpectationFailed` | If there is no such call, or it returned something else |
+
+---
+
+#### toHaveNthReturnedWith
+
+`const` `inline`
+
+```cpp
+template<class V> inline void toHaveNthReturnedWith(unsigned int n, const V & value) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L917?:917
+
+---
+
+#### toHaveNthReturnedWith
+
+`const` `inline`
+
+```cpp
+template<class V> inline void toHaveNthReturnedWith(int n, const V & value) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L921?:921
+
 
 
 ## EachFn
@@ -1178,7 +1988,7 @@ template<template< class > class Binder>
 struct EachFn
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L945?:945
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1334?:1334
 
 ### Public Attributes
 
@@ -1194,14 +2004,14 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 bool failing
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L946?:946
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1335?:1335
 
 ### Public Methods
 
 | Return | Name | Description |
 |--------|------|-------------|
-| `auto` | [`operator()`](#operator-2) `const` `inline` `requires Range<R>` |  |
-| `auto` | [`operator()`](#operator-3) `const` `inline` |  |
+| `auto` | [`operator()`](#operator-3) `const` `inline` `requires Range<R>` |  |
+| `auto` | [`operator()`](#operator-4) `const` `inline` |  |
 
 ---
 
@@ -1213,7 +2023,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 template<class R> inline auto operator()(const R & rows) const requires Range<R>
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L948?:948
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1337?:1337
 
 ---
 
@@ -1225,7 +2035,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 template<class T> inline auto operator()(std::initializer_list< T > rows) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L953?:953
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1342?:1342
 
 
 
@@ -1235,7 +2045,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 struct FailingApi
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L959?:959
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1348?:1348
 
 ### Public Attributes
 
@@ -1251,62 +2061,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 EachFn< EachBinder > each {true}
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L960?:960
-
-### Public Methods
-
-| Return | Name | Description |
-|--------|------|-------------|
-| `void` | [`operator()`](#operator-4) `const` `inline` |  |
-
----
-
-#### operator()
-
-`const` `inline`
-
-```cpp
-inline void operator()(const std::string & name, const std::function< void()> & fn, int timeoutMs = -1) const
-```
-
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L961?:961
-
-
-
-## TestApi
-
-```cpp
-struct TestApi
-```
-
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L966?:966
-
-### Public Attributes
-
-| Return | Name | Description |
-|--------|------|-------------|
-| `EachFn< EachBinder >` | [`each`](#each-1)  |  |
-| `FailingApi` | [`failing`](#failing-2)  |  |
-
----
-
-#### each
-
-```cpp
-EachFn< EachBinder > each {false}
-```
-
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L967?:967
-
----
-
-#### failing
-
-```cpp
-FailingApi failing {}
-```
-
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L968?:968
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1349?:1349
 
 ### Public Methods
 
@@ -1324,7 +2079,62 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline void operator()(const std::string & name, const std::function< void()> & fn, int timeoutMs = -1) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L969?:969
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1350?:1350
+
+
+
+## TestApi
+
+```cpp
+struct TestApi
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1355?:1355
+
+### Public Attributes
+
+| Return | Name | Description |
+|--------|------|-------------|
+| `EachFn< EachBinder >` | [`each`](#each-1)  |  |
+| `FailingApi` | [`failing`](#failing-2)  |  |
+
+---
+
+#### each
+
+```cpp
+EachFn< EachBinder > each {false}
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1356?:1356
+
+---
+
+#### failing
+
+```cpp
+FailingApi failing {}
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1357?:1357
+
+### Public Methods
+
+| Return | Name | Description |
+|--------|------|-------------|
+| `void` | [`operator()`](#operator-6) `const` `inline` |  |
+
+---
+
+#### operator()
+
+`const` `inline`
+
+```cpp
+inline void operator()(const std::string & name, const std::function< void()> & fn, int timeoutMs = -1) const
+```
+
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1358?:1358
 
 
 
@@ -1334,7 +2144,7 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 struct DescribeApi
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L974?:974
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1363?:1363
 
 ### Public Attributes
 
@@ -1350,13 +2160,13 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 EachFn< DescribeEachBinder > each {false}
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L975?:975
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1364?:1364
 
 ### Public Methods
 
 | Return | Name | Description |
 |--------|------|-------------|
-| `void` | [`operator()`](#operator-6) `const` `inline` |  |
+| `void` | [`operator()`](#operator-7) `const` `inline` |  |
 
 ---
 
@@ -1368,6 +2178,6 @@ Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp
 inline void operator()(const std::string & name, const std::function< void()> & fn) const
 ```
 
-Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L976?:976
+Defined in https://github.com/blorbee1/jest-cpp/blob/master/include/jest-cpp.hpp#L1365?:1365
 
 Generated by [Moxygen](https://0state.com/moxygen)
