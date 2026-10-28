@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Mock functions: `jest::fn<Sig>()` or `jest::fn(impl)`, can be configured with `mockReturnValue`, `mockreturnValueOnce`, `mockImplementation`, `mockImplementationOnce`, `mockClear`, `mockReset`, and `mockName`
+- New matchers: `toHaveBeencalled`, `toHaveBeenCalledTimes`, `toHaveBeenCalledWith`, `toHaveBeenLastCalledWith`, `toHaveBeenNthCalledWith`, `toHaveReturned`, `toHaveReturnedTimes`, `toHaveReturnedWith`, `toHaveLastReturnedWith`, `toHaveNthReturnedWith`
+- `jest::anything` to match any single argument
+- Mock function tester
+
 ## [1.0.1] - 2026-10-27
 
 ### Changed

@@ -2,7 +2,7 @@
  * @file jest-cpp.hpp
  * @brief A single-header JestJS C++ port
  *
- * jest-cpp provides Jest style syntaax for writing and running C++ tests.
+ * jest-cpp provides Jest style syntax for writing and running C++ tests.
  *
  * Define `JEST_NO_MACROS` if you don't want any macros from jest-cpp
  *
@@ -22,6 +22,7 @@
  *
  *     return run();
  * }
+ * @endcond
  *
  * @section requirements Requirements
  * - C++20 or later
@@ -54,6 +55,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <deque>
 
 /// @cond TURN_OFF_DOXYGEN
 
@@ -84,6 +86,37 @@
  * @brief Public API for the jest-cpp testing framework.
  */
 namespace jest {
+    /**
+     * @brief What happened in one one of a mock
+     *
+     * Found in `mock.results[i].type`
+     *
+     * @see Mock
+     */
+    enum class ResultType {
+        INCOMPLETE,
+        RETURN,
+        THROW
+    };
+
+    /**
+     * @brief Placeholder that matches any single argument in the mock matchers
+     *
+     * Use the ready made object jest::anything rather than creating one
+     *
+     * @see anything
+     */
+    struct Anything {};
+
+    /// @cond TURN_OFF_DOXYGEN
+
+    template <class Sig>
+    class Mock;
+
+    JEST_CPP_INLINE std::ostream& operator<<(std::ostream& o, const Anything&);
+
+    /// @endcond
+
     /**
      * @brief A regular expression that retains its original pattern.
      *
@@ -265,6 +298,118 @@ namespace jest {
             else if constexpr (std::is_constructible_v<bool, const T&>) return static_cast<bool>(v);
             else if constexpr (StringLike<T>) return !std::string_view(v).empty();
             else return true;
+        }
+
+        // mock functions
+
+        // stands in for an argument or return value that couldnt be recorded because its type cant be copied
+        struct Unrecorded {};
+        JEST_CPP_INLINE std::ostream& operator<<(std::ostream& o, const Unrecorded&);
+
+        template <class T>
+        struct RecordedOf {
+            using D = std::decay_t<T>;
+            using type = std::conditional_t<std::is_same_v<D, const char*> || std::is_same_v<D, char*>, std::string,
+                std::conditional_t<std::is_copy_constructible_v<D>, D, Unrecorded>>;
+        };
+
+        template <class T>
+        using Recorded = typename RecordedOf<T>::type;
+
+        template <class T>
+        Recorded<T> record([[maybe_unused]] const T& v) {
+            using Out = Recorded<T>;
+            if constexpr (std::is_same_v<Out, Unrecorded>)
+                return Out {};
+            else if constexpr (std::is_same_v<Out, std::string> && !std::is_same_v<std::decay_t<T>, std::string>)
+                return v ? std::string(v) : std::string();
+            else
+                return v;
+        }
+
+        template <class R, class... Args>
+        struct MockData {
+            using Call = std::tuple<Recorded<Args>...>;
+            struct Result {
+                ResultType type = ResultType::INCOMPLETE;
+                std::optional<Recorded<R>> value; // what was returned (empty for void)
+                std::exception_ptr error; // what was thrown
+            };
+            std::vector<Call> calls;
+            std::vector<Result> results;
+        };
+
+        template <class T>
+        struct IsMock : std::false_type {};
+
+        template <class Sig>
+        struct IsMock<Mock<Sig>> : std::true_type {};
+
+        template <class R, class... A>
+        Mock<R(A...)> makeMock(std::function<R(A...)> f) {
+            return Mock<R(A...)>(std::move(f));
+        }
+
+        // mock function helpers
+        template <class A, class B>
+        bool argMatches([[maybe_unused]] const A& recorded, [[maybe_unused]] const B& expected) {
+            if constexpr (std::is_same_v<B, Anything>)
+                return true;
+            else {
+                static_assert(!std::is_same_v<A, Unrecorded>, "This value has a type that can't be copied, so the mock couldn't record it; compare it with jest::anything instead");
+                return deepEq(recorded, expected);
+            }
+        }
+
+        template <class Call, class... E>
+        bool callMatches([[maybe_unused]] const Call& call, [[maybe_unused]] const E&... expected) {
+            static_assert(std::tuple_size_v<Call> == sizeof...(E), "The number of expected arguments doesn't match the mock's parameters");
+            return [&]<std::size_t... I>(std::index_sequence<I...>) {
+                [[maybe_unused]] const auto ex = std::tie(expected...);
+                return (argMatches(std::get<I>(call), std::get<I>(ex)) && ...);
+            }(std::index_sequence_for<E...>{});
+        }
+
+        template <class... E>
+        std::string argList(const E&... expected) {
+            std::string out;
+            [[maybe_unused]] std::size_t i = 0;
+            ((out += (i++ ? ", " : "") + str(expected)), ...);
+            return out;
+        }
+
+        template <class M>
+        std::string describeCalls(const M& m) {
+            const auto& calls = m.mock.calls;
+            std::string out = m.getMockName();
+            if (calls.empty())
+                return out + " was not called";
+            out += " was called " + std::to_string(calls.size()) + (calls.size() == 1 ? " time" : " times");
+            for (std::size_t i = 0; i < calls.size(); ++i)
+                out += "\n\t" + std::to_string(i + 1) + ": " + str(calls[i]);
+            return out;
+        }
+
+        template <class M>
+        std::string describeResults(const M& m) {
+            const auto& results = m.mock.results;
+            std::string out = m.getMockName();
+            if (results.empty())
+                return out + " was not called";
+            out += " results:";
+            for (std::size_t i = 0; i < results.size(); ++i) {
+                const auto& r = results[i];
+                const std::string what = r.type == ResultType::RETURN
+                    ? (r.value ? "returned " + str(*r.value) : std::string("returned"))
+                    : (r.type == ResultType::THROW ? "threw" : "has not finished");
+                out += "\n\t" + std::to_string(i + 1) + ": " + what;
+            }
+            return out;
+        }
+
+        template <class Res, class V>
+        bool returnedValue(const Res& r, const V& value) {
+            return r.type == ResultType::RETURN && r.value.has_value() && argMatches(*r.value, value);
         }
 
         // matchers
@@ -534,6 +679,250 @@ namespace jest {
                 }
                 check(ok, "toThrow(" + str(substr) + ")", what);
             }
+
+            // mock functions
+
+            /**
+             * @brief Checks that the mock was called at least once
+             * @throws detail::ExpectationFailed If the mock was never called
+             *
+             * @code
+             * expect(notify).toHaveBeenCalled();
+             * @endcode
+             */
+            void toHaveBeenCalled() const {
+                static_assert(IsMock<T>::value, "toHaveBeenCalled needs a mock made with jest::fn");
+                check(!actual.mock.calls.empty(), "toHaveBeenCalled()", describeCalls(actual));
+            }
+
+            /**
+             * @brief Checks that the mock was called exactly @p n times
+             * @param n Expected number of calls
+             * @throws detail::ExpectationFailed If it was called a different number of times
+             *
+             * @code
+             * expect(charge).toHaveBeenCalledTimes(2);
+             * @endcode
+             */
+            void toHaveBeenCalledTimes(std::size_t n) const {
+                static_assert(IsMock<T>::value, "toHaveBeenCalledTimes needs a mock made with jest::fn");
+                check(actual.mock.calls.size() == n, "toHaveBeenCalledTimes(" + std::to_string(n) + ")", describeCalls(actual));
+            }
+            void toHaveBeenCalledTimes(unsigned int n) const {
+                toHaveBeenCalledTimes(static_cast<size_t>(n));
+            }
+            void toHaveBeenCalledTimes(int n) const {
+                if (n < 0)
+                    throw std::runtime_error("Invalid times");
+                toHaveBeenCalledTimes(static_cast<size_t>(n));
+            }
+
+            /**
+             * @brief Checks that at least one call received has exactly these arguments
+             *
+             * Arguments are compared like toEqual(), and jest::anything matches any value. The number of expected arguments must match the mock's parameters; this is checked when you compile
+             *
+             * @tparam E Types of the expected arguments
+             * @param expected The expected arguments
+             * @throws detail::ExpectationFailed If not call matches
+             *
+             * @code
+             * expect(charge).toHaveBeenCalledWith(49.99);
+             * expect(log).toHaveBeenCalledWith(3, anything);
+             * @endcode
+             *
+             * @see toHaveBeenLastCalledWith, toHaveBeenNthCalledWith
+             */
+            template <class... E>
+            void toHaveBeenCalledWith(const E&... expected) const {
+                static_assert(IsMock<T>::value, "toHaveBeenCalledWith needs a mock made with jest::fn");
+                bool found = false;
+                for (const auto& call : actual.mock.calls) {
+                    if (callMatches(call, expected...)) {
+                        found = true;
+                        break;
+                    }
+                }
+                check(found, "toHaveBeenCalledWith(" + argList(expected...) + ")", describeCalls(actual));
+            }
+
+            /**
+             * @brief Checks that the last call received has exactly these arguments
+             *
+             * Arguments are compared like toEqual(), and jest::anything matches any value
+             *
+             * @tparam E Types of the expected arguments
+             * @param expected The expected arguments
+             * @throws detail::ExpectationFailed If the mock was never called, or its last call doesn't match
+             *
+             * @see toHaveBeenCalledWith, toHaveBeenNthCalledWith
+             */
+            template <class... E>
+            void toHaveBeenLastCalledWith(const E&... expected) const {
+                static_assert(IsMock<T>::value, "toHaveBeenLastCalledWith needs a mock made with jest::fn");
+                const auto& calls = actual.mock.calls;
+                const bool ok = !calls.empty() && callMatches(calls.back(), expected...);
+                check(ok, "toHaveBeenLastCalledWith(" + argList(expected...) + ")", describeCalls(actual));
+            }
+
+            /**
+             * @brief Checks that call number @p n received exactly these arguments
+             *
+             * Calls are counted from 1
+             *
+             * @tparam E Types of the expected arguments
+             * @param n Number of the call, starting at 1
+             * @param expected The expected arguments
+             * @throws detail::ExpectationFailed If there is no such call, or it doesn't match
+             *
+             * @code
+             * expect(notify).toHaveBeenNthCalledWith(1, "started");
+             * @endcode
+             *
+             * @see toHaveBeenCalledWith, toHaveBeenLastCalledWith
+             */
+            template <class... E>
+            void toHaveBeenNthCalledWith(std::size_t n, const E&... expected) const {
+                static_assert(IsMock<T>::value, "toHaveBeenNthCalledWith needs a mock made with jest::fn");
+                const auto& calls = actual.mock.calls;
+                const bool ok = n >= 1 && n <= calls.size() && callMatches(calls[n - 1], expected...);
+                check(ok, "toHaveBeenNthCalledWith(" + std::to_string(n) + (sizeof...(E) ? ", " : "") + argList(expected...) + ")", describeCalls(actual));
+            }
+            template <class... E>
+            void toHaveBeenNthCalledWith(unsigned int n, const E&... expected) const {
+                toHaveBeenNthCalledWith(static_cast<size_t>(n), expected...);
+            }
+            template <class... E>
+            void toHaveBeenNthCalledWith(int n, const E&... expected) const {
+                if (n < 0)
+                    throw std::runtime_error("Invalid nth");
+                toHaveBeenNthCalledWith(static_cast<size_t>(n), expected...);
+            }
+
+            /**
+             * @brief Checks that the mock returned at least once
+             *
+             * "Returned" means the call finished without throwing
+             *
+             * @throws detail::ExpectationFailed If no call returned
+             */
+            void toHaveReturned() const {
+                static_assert(IsMock<T>::value, "toHaveReturned needs a mock made with jest::fn");
+                const auto& results = actual.mock.results;
+                const bool ok = std::any_of(results.begin(), results.end(), [](const auto& r) {
+                    return r.type == ResultType::RETURN;
+                });
+                check(ok, "toHaveReturned()", describeResults(actual));
+            }
+
+            /**
+             * @brief Checks that the mock returned exactly @p n times
+             *
+             * "Returned" means the call finished without throwing
+             *
+             * @param n Expected number of returns
+             * @throws detail::ExpectationFailed If the count differs
+             */
+            void toHaveReturnedTimes(std::size_t n) const {
+                static_assert(IsMock<T>::value, "toHaveReturnedTimes needs a mock made with jest::fn");
+                const auto& results = actual.mock.results;
+                const auto count = static_cast<std::size_t>(
+                    std::count_if(results.begin(), results.end(), [](const auto& r) {
+                        return r.type == ResultType::RETURN;
+                    }));
+                check(count == n, "toHaveReturnedTimes(" + std::to_string(n) + ")", describeResults(actual));
+            }
+            void toHaveReturnedTimes(unsigned int n) const {
+                toHaveReturnedTimes(static_cast<size_t>(n));
+            }
+            void toHaveReturnedTimes(int n) const {
+                if (n < 0)
+                    throw std::runtime_error("Invalid times");
+                toHaveReturnedTimes(static_cast<size_t>(n));
+            }
+
+            /**
+             * @brief Checks that at least one call returned @p value
+             *
+             * The value is compared like toEqual(). The mock must not return `void`
+             *
+             * "Returned" means the call finished without throwing
+             *
+             * @tparam V Type of the expected value
+             * @param value The expected return value
+             * @throws detail::ExpectationFailed If no call returned that value
+             *
+             * @code
+             * expect(charge).toHaveReturnedWith(true);
+             * @endcode
+             *
+             * @see toHaveLastReturnedWith, toHaveNthReturnedWith
+             */
+            template <class V>
+            void toHaveReturnedWith(const V& value) const {
+                static_assert(IsMock<T>::value, "toHaveReturnedWith needs a mock made with jest::fn");
+                static_assert(!std::is_void_v<typename T::result_type>, "toHaveReturnedWith: this mock returns void");
+                const auto& results = actual.mock.results;
+                const bool ok = std::any_of(results.begin(), results.end(), [&](const auto& r) {
+                    return returnedValue(r, value);
+                });
+                check(ok, "toHaveReturnedWith(" + str(value) + ")", describeResults(actual));
+            }
+
+            /**
+             * @brief Checks that the last call returned @p value
+             *
+             * The value is compared like toEqual(). A last call that threw doesn't match. The mock must not return `void`
+             *
+             * "Returned" means the call finished without throwing
+             *
+             * @tparam V Type of the expected value
+             * @param value The expected return value
+             * @throws detail::ExpectationFailed If the last call didn't return that value
+             *
+             * @see toHaveReturnedWith, toHaveNthReturnedWith
+             */
+            template <class V>
+            void toHaveLastReturnedWith(const V& value) const {
+                static_assert(IsMock<T>::value, "toHaveLastReturnedWith needs a mock made with jest::fn");
+                static_assert(!std::is_void_v<typename T::result_type>, "toHaveLastReturnedWith: this mock returns void");
+                const auto& results = actual.mock.results;
+                const bool ok = !results.empty() && returnedValue(results.back(), value);
+                check(ok, "toHaveLastReturnedWith(" + str(value) + ")", describeResults(actual));
+            }
+
+            /**
+             * @brief Checks that call number @p n returned @p value
+             *
+             * Calls are counted from 1. The value is compared like toEqual(). The mock must not return `void`
+             *
+             * "Returned" means the call finished without throwing
+             *
+             * @tparam V Type of the expected value
+             * @param n Number of the call, starting at 1
+             * @param value The expected return value
+             * @throws detail::ExpectationFailed If there is no such call, or it returned something else
+             *
+             * @see toHaveLastReturnedWith, toHaveReturnedWith
+             */
+            template <class V>
+            void toHaveNthReturnedWith(std::size_t n, const V& value) const {
+                static_assert(IsMock<T>::value, "toHaveNthReturnedWith needs a mock made with jest::fn");
+                static_assert(!std::is_void_v<typename T::result_type>, "toHaveNthReturnedWith: this mock returns void");
+                const auto& results = actual.mock.results;
+                const bool ok = n >= 1 && n <= results.size() && returnedValue(results[n - 1], value);
+                check(ok, "toHaveNthReturnedWith(" + std::to_string(n) + ", " + str(value) + ")", describeResults(actual));
+            }
+            template <class V>
+            void toHaveNthReturnedWith(unsigned int n, const V& value) const {
+                toHaveNthReturnedWith(static_cast<size_t>(n), value);
+            }
+            template <class V>
+            void toHaveNthReturnedWith(int n, const V& value) const {
+                if (n < 0)
+                    throw std::runtime_error("Invalid nth");
+                toHaveNthReturnedWith(static_cast<size_t>(n), value);
+            }
         };
 
         /// @cond TURN_OFF_DOXYGEN
@@ -751,7 +1140,7 @@ namespace jest {
                 (chain.back()->*slot).push_back(std::move(fn));
             }
 
-            void runTest(const std::string& name, const std::function<void()>& fn, int timeoutMs, bool expectFail) {
+            void runTest(const std::string& name, const FnRef& fn, int timeoutMs, bool expectFail) {
                 std::string full;
                 for (std::size_t i = 1; i < chain.size(); ++i)
                     full += chain[i]->name + " ";
@@ -981,6 +1370,265 @@ namespace jest {
     }
 
     // public API
+
+    /**
+     * @brief A function that records how it was called. Create one with `jest::fn`
+     *
+     * A Mock is a cheap handle onto a shared state, copying it (for example into a std::function) keeps recording
+     * into the same place, so the original handle sees every call
+     *
+     * Not thread-safe
+     *
+     * @tparam R Type of the return value
+     * @tparam Args Type of the arguments
+     */
+    template <class R, class... Args>
+    class Mock<R(Args...)> {
+        /// @cond TURN_OFF_DOXYGEN
+
+        static_assert(!std::is_reference_v<R>, "A mock can't return a reference; return a value or a pointer");
+        using Impl = std::function<R(Args...)>;
+        using Data = detail::MockData<R, Args...>;
+
+        struct State : Data {
+            Impl initial, impl;
+            std::deque<Impl> once;
+            std::string name = "jest.fn()";
+        };
+        std::shared_ptr<State> state;
+
+        static R defaultValue() {
+            if constexpr (std::is_default_constructible_v<R>)
+                return R{};
+            else
+                throw std::logic_error("This mock has no return value or implementation; use mockReturnValue or mockImplementation");
+        }
+
+    public:
+        using result_type = R;
+        using Call = Data::Call;
+        using Result = Data::Result;
+
+        /// @encond
+
+        /**
+         * @brief The record of everything that happened to this mock
+         *
+         * - `mock.calls`: one tuple of arguments per call, in order
+         * - `mock.results`: one entry per call, in order, with
+         *   - `type`: a ResultType
+         *   - `value`: a `std::optional` holding the return value (empty for `void`)
+         *   - `error`: the `std::exception_ptr` of the exception, if the call threw
+         *
+         * @code
+         * auto m = jest::fn<int(int)>().mockReturnValue(7);
+         * m(5);
+         * std::get<0>(m.mock.calls[0]); // 5
+         * m.mock.results[0].value; // Optional(7)
+         * @endcode
+         */
+        const Data& mock;
+
+        /// @cond TURN_OFF_DOXYGEN
+
+        Mock() : state(std::make_shared<State>()), mock(*state) {}
+        explicit Mock(Impl impl) : Mock() {
+            state->initial = impl;
+            state->impl = std::move(impl);
+        }
+        Mock(const Mock& other) : state(other.state), mock(*state) {}
+        Mock& operator=(const Mock&) = delete;
+
+        /// @endcond
+
+        /**
+         * @brief Calls the mock, records the call, then runs the next once-implementation, or the implementation, or returns `R{}` (or throws if `R` has no default constructor
+         *
+         * @param args The arguments to pass
+         * @return The value that got returned from the call, if not void
+         */
+        R operator()(Args... args) const {
+            State& s = *state;
+            const std::size_t index = s.calls.size();
+            s.calls.emplace_back(detail::record(args)...);
+            s.results.emplace_back();
+
+            Impl impl;
+            if (!s.once.empty()) {
+                impl = std::move(s.once.front());
+                s.once.pop_front();
+            } else {
+                impl = s.impl;
+            }
+
+            try {
+                if constexpr (std::is_void_v<R>) {
+                    if (impl)
+                        impl(std::forward<Args>(args)...);
+                    s.results[index].type = ResultType::RETURN;
+                } else {
+                    R value = impl ? impl(std::forward<Args>(args)...) : defaultValue();
+                    s.results[index].value = detail::record(value);
+                    s.results[index].type = ResultType::RETURN;
+                    return value;
+                }
+            } catch (...) {
+                s.results[index].type = ResultType::THROW;
+                s.results[index].error = std::current_exception();
+                throw;
+            }
+        }
+
+        /**
+         * @brief Sets what the mock does from now on
+         *
+         * @param f Function to call
+         * @return Itself
+         */
+        Mock mockImplementation(Impl f) const {
+            state->impl = std::move(f);
+            return *this;
+        }
+
+        /**
+         * @brief Sets what the next call does (once). Several can be queued, they are used in order
+         *
+         * @param f Function to call
+         * @return Itself
+         */
+        Mock mockImplementationOnce(Impl f) const {
+            state->once.push_back(std::move(f));
+            return *this;
+        }
+
+        /**
+         * @brief Makes the mock return `v` from now on
+         *
+         * @tparam V Type of the new return value
+         * @param v Value to return
+         * @return Itself
+         */
+        template <class V = R> requires(!std::is_void_v<V>)
+        Mock mockReturnValue(std::type_identity_t<V> v) const {
+            state->impl = [v](Args...) -> R { return v; };
+            return *this;
+        }
+
+        /**
+         * @brief Makes the mock return `v` (once). Several can be queued, they are used in order
+         *
+         * @tparam V Type of the return value
+         * @param v Value to return
+         * @return Itself
+         */
+        template <class V = R> requires(!std::is_void_v<V>)
+        Mock mockReturnValueOnce(std::type_identity_t<V> v) const {
+            state->once.push_back([v](Args...) -> R { return v; });
+            return *this;
+        }
+
+        /**
+         * @brief Forgets the recorded calls and results, keeps the implementations
+         * @return Itself
+         */
+        Mock mockClear() const {
+            state->calls.clear();
+            state->results.clear();
+            return *this;
+        }
+
+        /**
+         * @brief Calls `mockClear()` but also goes back to the implementation give to jest::fn (or to none)
+         * @return Itself
+         */
+        Mock mockReset() const {
+            mockClear();
+            state->impl = state->initial;
+            state->once.clear();
+            return *this;
+        }
+
+        /**
+         * @brief Names the mock in failure messages (defaults to "jest.fn()")
+         *
+         * @param name Name to give
+         * @return Itself
+         */
+        Mock mockName(std::string name) const {
+            state->name = std::move(name);
+            return *this;
+        }
+
+        /// @cond TURN_OFF_DOXYGEN
+        const std::string& getMockName() const {
+            return state->name;
+        }
+        /// @endcond
+    };
+
+    /**
+     * @brief Create a new mock function with no implementation
+     *
+     * Calling it records the call and returns a default value: `R{}` (nothing for `void`). Use mockReturnValue() or mockImplementation() to change what it does
+     *
+     * @tparam Sig Function signature, such as `bool(double)`
+     * @return The mock function
+     *
+     * @code
+     * auto charge = jest::fn<bool(double)>().mockReturnValue(true);
+     * @endcode
+     */
+    template <class Sig>
+    Mock<Sig> fn() {
+        return Mock<Sig>();
+    }
+
+    /**
+     * @brief Create a new mock function that runs an implementation function
+     * @tparam Sig Function signature, such as `bool(double)`
+     * @tparam F Implementation type
+     * @param impl What the mock does when it is called
+     * @return The mock function
+     *
+     * @code
+     * auto half = jest::fn<double(int>([](int x) { return x / 2.0; });
+     * @endcode
+     */
+    template <class Sig, class F>
+    Mock<Sig> fn(F&& impl) {
+        return Mock<Sig>(std::function<Sig>(std::forward<F>(impl)));
+    }
+
+    /**
+     * @brief Create a new mock function that runs an implementation function, taking the signature from it
+     *
+     * Works with lamdas that aren't generic and with function pointers
+     *
+     * @tparam F Function signature, such as `bool(double)`
+     * @param impl What the mock does when it is called
+     * @return The mock function
+     *
+     * @code
+     * auto add jest::fn([](int a, int b) { return a + b; });
+     * @endcode
+     */
+    template <class F>
+    auto fn(F&& impl) {
+        return detail::makeMock(std::function(std::forward<F>(impl)));
+    }
+
+    /**
+     * @brief Matches any single argument in the mock matchers
+     *
+     * Use it for the arguments you don't care about
+     *
+     * @code
+     * expect(log).toHaveBeenCalledWith(3, anything);
+     * expect(log).toHaveBeenCalledWith(anything, "x");
+     * @endcode
+     */
+    inline constexpr Anything anything{};
+
     /**
      * @brief Registers and executes a test case.
      *
@@ -1097,6 +1745,14 @@ namespace jest {
                 return false;
             }
         }
+
+        JEST_CPP_INLINE std::ostream& operator<<(std::ostream& o, const Unrecorded&) {
+            return o << "<not recorded>";
+        }
+    }
+
+    JEST_CPP_INLINE std::ostream& operator<<(std::ostream& o, const Anything&) {
+        return o << "anything";
     }
 
     JEST_CPP_INLINE Regex::Regex(std::string src, std::regex::flag_type f) : std::regex(src, f), source(std::move(src)) {}
