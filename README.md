@@ -91,6 +91,7 @@ More in the [guide](https://blorbee1.github.io/jest-cpp/docs/getting-started), a
 | [`hooks.cpp`](examples/hooks.cpp) | `beforeAll`, `beforeEach`, `afterEach`, `afterAll` |
 | [`each_and_failing.cpp`](examples/each_and_failing.cpp) | `.each`, `describe.each`, `.failing` |
 | [`matchers.cpp`](examples/matchers.cpp) | a tour of the matchers |
+| [`mocks.cpp`](examples/mocks.cpp) | mock functions and dependency injection |
 
 ## Command line
 
