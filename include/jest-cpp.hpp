@@ -22,7 +22,7 @@
  *
  *     return run();
  * }
- * @endcond
+ * @endcode
  *
  * @section requirements Requirements
  * - C++20 or later
@@ -1409,7 +1409,7 @@ namespace jest {
         using Call = Data::Call;
         using Result = Data::Result;
 
-        /// @encond
+        /// @endcond
 
         /**
          * @brief The record of everything that happened to this mock
