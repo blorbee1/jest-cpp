@@ -33,6 +33,15 @@ jobs:
       - name: Show CMake version
         run: cmake --version
 
+      - name: Install compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-13 g++-14
+          wget https:://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 18
+          sudo apt-get install -y clang-18
+
       - name: Configure
         run: >
           cmake -S . -B build
@@ -65,6 +74,11 @@ jobs:
       - name: Show CMake version
         run: cmake --version
 
+      - name: Install GCC 13
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-13
+
       - name: Configure
         run: >
           cmake -S . -B build
@@ -96,6 +110,11 @@ jobs:
 
       - name: Show CMake version
         run: cmake --version
+
+      - name: Install GCC 13
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-13
 
       - name: Configure
         run: >
