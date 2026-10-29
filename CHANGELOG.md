@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-28
+
 ### Added
 - Mock functions: `jest::fn<Sig>()` or `jest::fn(impl)`, can be configured with `mockReturnValue`, `mockreturnValueOnce`, `mockImplementation`, `mockImplementationOnce`, `mockClear`, `mockReset`, and `mockName`
 - New matchers: `toHaveBeencalled`, `toHaveBeenCalledTimes`, `toHaveBeenCalledWith`, `toHaveBeenLastCalledWith`, `toHaveBeenNthCalledWith`, `toHaveReturned`, `toHaveReturnedTimes`, `toHaveReturnedWith`, `toHaveLastReturnedWith`, `toHaveNthReturnedWith`
@@ -44,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Examples, the library's own tests, and CI.
 - Documentation site
 
-[Unreleased]: https://github.com/blorbee1/jest-cpp/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/blorbee1/jest-cpp/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/blorbee1/jest-cpp/releases/tag/v1.1.0
 [1.0.1]: https://github.com/blorbee1/jest-cpp/releases/tag/v1.0.1
 [1.0.0]: https://github.com/blorbee1/jest-cpp/releases/tag/v1.0.0
