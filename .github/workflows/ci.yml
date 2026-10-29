@@ -17,9 +17,9 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - { name: gcc-13, os: ubuntu-24.04 [Beta], cxx: g++-13 }
-          - { name: gcc-14, os: ubuntu-24.04 [Beta], cxx: g++-14 }
-          - { name: clang-18, os: ubuntu-24.04 [Beta], cxx: clang++-18 }
+          - { name: gcc-13, os: ubuntu-24.04, cxx: g++-13 }
+          - { name: gcc-14, os: ubuntu-24.04, cxx: g++-14 }
+          - { name: clang-18, os: ubuntu-24.04, cxx: clang++-18 }
 
     steps:
       - name: Check out repository
@@ -51,7 +51,7 @@ jobs:
   header-only:
     # test library as plain header
     name: header-only
-    runs-on: ubuntu-24.04 [Beta]
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Check out repository
@@ -83,7 +83,7 @@ jobs:
 
   sanitizers:
     name: asan-ubsan
-    runs-on: ubuntu-24.04 [Beta]
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Check out repository
