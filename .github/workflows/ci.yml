@@ -17,9 +17,9 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - { name: gcc-13, os: ubuntu-latest, cxx: g++-13 }
-          - { name: gcc-14, os: ubuntu-latest, cxx: g++-14 }
-          - { name: clang-18, os: ubuntu-latest, cxx: clang++-18 }
+          - { name: gcc-13, os: ubuntu-24.04 [Beta], cxx: g++-13 }
+          - { name: gcc-14, os: ubuntu-24.04 [Beta], cxx: g++-14 }
+          - { name: clang-18, os: ubuntu-24.04 [Beta], cxx: clang++-18 }
 
     steps:
       - name: Check out repository
@@ -32,15 +32,6 @@ jobs:
 
       - name: Show CMake version
         run: cmake --version
-
-      - name: Install compilers
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y g++-13 g++-14
-          wget https:://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 18
-          sudo apt-get install -y clang-18
 
       - name: Configure
         run: >
@@ -60,7 +51,7 @@ jobs:
   header-only:
     # test library as plain header
     name: header-only
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 [Beta]
 
     steps:
       - name: Check out repository
@@ -73,11 +64,6 @@ jobs:
 
       - name: Show CMake version
         run: cmake --version
-
-      - name: Install GCC 13
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y g++-13
 
       - name: Configure
         run: >
@@ -97,7 +83,7 @@ jobs:
 
   sanitizers:
     name: asan-ubsan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 [Beta]
 
     steps:
       - name: Check out repository
