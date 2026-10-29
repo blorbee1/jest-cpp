@@ -1,0 +1,507 @@
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+import CodeBlock from "@theme/CodeBlock";
+
+# Migrating from GoogleTest or Catch2
+
+If you already have tests written with GoogleTest (with or without GoogleMock) or Catch2, moving to jest-cpp is mostly rewriting assertions in a different shape.
+This page shows the old and new code side by side, then lists the few places where best-jpp behaves differently
+
+## Five differences that change behavior
+
+1. The value under test comes first. In jest-cpp you write `expect(actual).toBe(expected)`, where you put the expected value in `EXPECT_EQ(a, b)` varies between codebases
+
+2. Every `expect` stops the test when it fails. GoogleTest's `EXPECT_*` and Catch2's `CHECK` report a failure and keep going, so one run can show several problems. jest-cpp's `expect` behaves like `ASSERT_*` and `REQUIRE`, the first failure of the test ends it
+
+```cpp
+it("two checks") {
+    expect(a).toBe(1);  // if this fails, the test stops here
+    expect(b).toBe(2);  // and this line never runs
+};
+```
+
+If you relied on seeing several failures from one test, split it into several smaller tests (or use [`.each`](each.md))
+
+3. Shared state is not recreated for each test. GoogleTest builds a new fixture object for every test, and Catch2 runs the whole `TEST_CASE` BODY AGAIN FOR EVERY `SECTION`. jest-cpp runs a `describe` body once. Reset what needs resetting in `beforeEach`
+
+```cpp
+describe("describe level state is shared unless you reset it") {
+    std::vector<int> v;
+
+    it("first test adds an item") {
+        v.push_back(1);
+        expect(v).toHaveLength(1);
+    };
+
+    it("second test still sees it") {
+        expect(v).toHaveLength(1);
+    };
+}
+```
+
+4. Tests aren't registered globally. `TEST(...)` and `TEST_CASE(...)` are declarations that register themselves before `main` runs. In jest-cpp, `describe` and `it` are statements that run where you write them, so they live inside functions. To spread tests over several files, put each file's test in a function and call them from `main`
+
+5. There is no ULP comparison for floating points. `EXPECT_DOUBLE_EQ(0.1 + 0.2, 0.3)` passes in GoogleTest because it allows a few units in the last place. In jest-cpp `expect(0.1 + 0.2).toBe(0.3)` fails, use [`toBeCloseTo`](matchers.md) instead
+
+## Your first test
+
+<Tabs groupId="framework">
+    <TabItem value="gtest" label="GoogleTest" default>
+        <CodeBlock language="cpp">
+{`#include <gtest/gtest.h>
+
+TEST(MathTest, Adds) {
+    EXPECT_EQ(add(2, 3), 5);
+}
+`}
+            </CodeBlock>
+    </TabItem>
+
+    <TabItem value="catch2" label="Catch2">
+        <CodeBlock language="cpp">
+{`#include <catch2/catch_test_macros.hpp>
+
+TEST_CASE("adds", "[math]") {
+    REQUIRE(add(2, 3) == 5);
+}
+`}
+        </CodeBlock>
+    </TabItem>
+</Tabs>
+
+**jest-cpp**
+
+```cpp
+#include <jest-cpp.hpp>
+using namespace jest;
+
+int main(int argc, char** argv) {
+    init(argc, argv);
+
+    describe("math") {
+        it("adds") {
+            expect(add(2, 3)).toBe(5);
+        };
+    }
+
+    return run();
+}
+```
+
+`TEST(Suite Name)` becomes `it("Name")` inside `describe("Suite")`. Put the tests of one suite in one `describe`, keep the old names, so filters like `-t "Suite Name"` keep working
+
+## Assertions
+
+| GoogleTest | Catch2 | jest-cpp |
+|---|---|---|
+| `EXPECT_EQ(a, b)` | `REQUIRE(a == b)` | `expect(a).toBe(b)` |
+| `EXPECT_NE(a, b)` | `REQUIRE(a != b)` | `expect(a).never.toBe(b)` |
+| `EXPECT_LT(a, b)` | `REQUIRE(a < b)` | `expect(a).toBeLessThan(b)` |
+| `EXPECT_LE(a, b)` | `REQUIRE(a <= b)` | `expect(a).toBeLessThanOrEqual(b)` |
+| `EXPECT_GT(a, b)` | `REQUIRE(a > b)` | `expect(a).toBeGreaterThan(b)` |
+| `EXPECT_GE(a, b)` | `REQUIRE(a >= b)` | `expect(a).toBeGreaterThanOrEqual(b)` |
+| `EXPECT_TRUE(x)` | `REQUIRE(x)` | `expect(x).toBeTruthy()` |
+| `EXPECT_FALSE(x)` | `REQUIRE_FALSE(x)` | `expect(x).toBeFalsy()` |
+| `EXPECT_STREQ(a, b)` | `REQUIRE(a == b)` | `expect(a).toBe(b)` |
+| `EXPECT_THAT(s, HasSubstr("x"))` | `REQUIRE_THAT(s, ContainsSubstring("x"))` | `expect(s).toContain("x")` |
+| `EXPECT_THAT(s, StartsWith("x"))` | `REQUIRE_THAT(s, StartsWith("x"))` | `expect(s).toMatch("^x"_re)` |
+| `EXPECT_THAT(s, ContainsRegex("x"))` | | `expect(s).toMatch("x"_re)` |
+| `EXPECT_THAT(s, MatchesRegex("x"))` | `REQUIRE_THAT(s, Matches("x"))` | `expect(s).toMatch("^x$"_re)` |
+| `EXPECT_THAT(v, ElementsAre(1, 2, 3))` | `REQUIRE_THAT(v, Equals(...))` | `expect(v).toEqual(std::vector{1, 2, 3})` |
+| `EXPECT_THAT(v, Contains(2))` | `REQUIRE_THAT(v, Contains(2))` | `expect(v).toContain(2)` |
+| `EXPECT_THAT(v, SizeIs(3))` | `REQUIRE_THAT(v, SizeIs(3))` | `expect(v).toHaveLength(3)` |
+| `EXPECT_DOUBLE_EQ(a, b)` | `REQUIRE(a == Approx(b))` | `expect(a).toBeCloseTo(b)` |
+| `EXPECT_NEAR(a, b, tol)` | `REQUIRE_THAT(a, WithinAbs(b, tol))` | `expect(std::fabs(a - b)).toBeLessThanOrEqual(tol)` |
+| `EXPECT_ANY_THROW(f())` | `REQUIRE_THROWS(f())` | `expect([&] { f(); }).toThrow()` |
+| `EXPECT_NO_THROW(f())` | `REQUIRE_NOTHROW(f())` | `expect([&] { f(); }).never.toThrow()` |
+| | `REQUIRE_THROWS_WITH(f(), "msg")` | `expect([&] { f(); }).toThrow("msg")` |
+| `EXPECT_THROW(f(), T)` | `REQUIRE_THROWS_AS(f(), T)` | by hand, see [below](#checking-the-exception-type) |
+| `FAIL() << "msg"` | `FAIL("msg")` | `throw std::runtime_error("msg")` |
+| `SUCCEED()` | `SUCCEED()` | nothing: a test passes unless something fails |
+
+`ASSERT_*` and `REQUIRE` map to the same jest-cpp lines as `EXPECT_*`. All of them are fatal, as described above
+
+Three of these differ in ways that matter:
+
+- `toMatch`, with a regex, searches, like `ContainsRegex`. GoogleTest's `MatchesRegex` and Catch2's `Matches` need the whole string to match, so anchor with `^` and `$`. GoogleTest also has its own regex flavor (POSIX extended on Linux), while jest-cpp uses `std::regex` (EMCAScript)
+- `toThrow("msg")` checks that the exception message contains the text. Catch2's `REQUIRE_THROWS_WITH` compares the whole message
+- `toBeCloseTo(b)` passes when `abs(a - b) < 10^-digits / 2` (two digits by default). Pass the digits as a second argument, or use `std::fabs` for an exact tolerance like `EXPECT_NEAR`
+
+```cpp
+it("0.1 + 0.2 is not exactly 0.3") {
+    expect(0.1 + 0.2).toBeCloseTo(0.3);
+    expect(0.1 + 0.2).never.toBe(0.3);
+    expect(std::fabs(1.0 - 1.0005)).toBeLessThan(1e-3); // an absolute tolerance, like EXPECT_NEAR
+};
+```
+
+### Checking the exception type
+
+jest-cpp can check that something threw, and what its message contains, but not (yet) its type, catch it yourself:
+
+```cpp
+it("throws invalid_argument") {
+    bool rightType = false;
+    try {
+        parse("x");
+    } catch (const std::invalid_argument) {
+        rightType = true;
+    } catch (...) {}
+    expect(rightType).toBe(true);
+};
+```
+
+### Failure message and context
+
+`EXPECT_EQ(a, b) << "extra context"`, `SCOPED_TRACE`, Catch2's `INFO` and `CAPTURE` have no equivalent. To say more about a failure, put it in the test's name (or an `.each` title) and keep tests small
+
+## Fixtures
+
+<Tabs groupId="framework">
+    <TabItem value="gtest" label="GoogleTest" default>
+        <CodeBlock language="cpp">
+{`class StackTest : public ::testing::Test {
+protected:
+    void SetUp() override { stack.push(1); }
+    Stack stack;
+};
+
+TEST_F(StackTest, PopsLast) {
+    EXPECT_EQ(stack.pop(), 1);
+}
+
+TEST_F(StackTest, StartsWithOne) {
+    EXPECT_EQ(stack.size(), 1u);
+}
+`}
+        </CodeBlock>
+    </TabItem>
+
+    <TabItem value="catch2" label="Catch2">
+        <CodeBlock language="cpp">
+{`struct StackFixture {
+    StackFixture() { stack.push(1); }
+    Stack stack;
+};
+
+TEST_CASE_METHOD(StackFixture, "fixture pops last") {
+    REQUIRE(stack.pop() == 1);
+}
+`}
+        </CodeBlock>
+    </TabItem>
+</Tabs>
+
+**jest-cpp**
+
+```cpp
+describe("Stack (fixture)") {
+    Stack stack;
+    beforeEach { stack = Stack{}; stack.push(1); };
+
+    it("pops the last item") {
+        expect(stack.pop()).toBe(1);
+    };
+
+    it("starts with one item") {
+        expect(stack.size()).toBe(1);
+    };
+}
+```
+
+`SetUp` and `TearDown` become `beforeEach` and `afterEach`; `SetUpTestSuite` and `TearDownTestSuite` become `beforeAll` and `afterAll`. Declare hooks before the tests they apply to, and don't touch the `describe`'s variables in `afterAll`. SEe [hooks](writing-tests.md#hooks)
+
+## Catch2 sections
+
+<Tabs groupId="framework">
+    <TabItem value="catch2" label="Catch2" default>
+        <CodeBlock language="cpp">
+{`TEST_CASE("vector") {
+    std::vector v{1, 2, 3};  // runs once per leaf SECTION
+    SECTION("push_back") {
+        v.push_back(4);
+        REQUIRE(v.size() == 4);
+    }
+    SECTION("clear") {
+        v.clear();
+        REQUIRE(v.empty());
+    }
+}
+`}
+        </CodeBlock>
+    </TabItem>
+</Tabs>
+
+**jest-cpp**
+
+```cpp
+describe("vector (sections)") {
+    std::vector<int> v;
+    beforeEach { v = {1, 2, 3}; } // the setup that Catch2 repeats for you
+
+    it("push_back") {
+        v.push_back(4);
+        expect(v).toHaveLength(4);
+    };
+
+    it("clear") {
+        v.clear();
+        expect(v).toHaveLength(0);
+    };
+}
+```
+
+Each `SECTION` becomes an `it`, and the code before the sections become a `beforeEach`. Nested sections become nested `describe` blocks
+
+### Given / When / Then
+
+<Tabs groupId="framework">
+    <TabItem value="catch2" label="Catch2" default>
+        <CodeBlock language="cpp">
+{`SCENARIO("a stack", "[bdd]") {
+    GIVEN("a stack with one item") {
+        Stack s;
+        s.push(1);
+        WHEN("it is popped") {
+            int v = s.pop();
+            THEN("it returns the item") {
+                REQUIRE(v == 1);
+            }
+        }
+    }
+}
+`}
+        </CodeBlock>
+    </TabItem>
+</Tabs>
+
+**jest-cpp**
+
+```cpp
+describe("BDD style") {
+    describe("given a stack with one item") {
+        Stack s;
+        s.push(1);
+        describe("when it is popped") {
+            int v = s.pop();
+            it("returns the item") {
+                expect(v).toBe(1);
+            };
+        }
+    }
+}
+```
+
+## Parameterized tests
+
+<Tabs groupId="framework">
+    <TabItem value="gtest" label="GoogleTest" default>
+        <CodeBlock language="cpp">
+{`class AddTest : public ::testing::TestWithParam<std::tuple<int, int, int>> {};
+
+TEST_P(AddTest, Adds) {
+    auto [a, b, sum] = GetParam();
+    EXPECT_EQ(add(a, b), sum);
+}
+INSTANTIATE_TEST_SUITE_P(Cases, AddTest, ::testing::Values(std::make_tuple(1, 1, 2), std::make_tuple(2, 3, 5)));
+`}
+        </CodeBlock>
+    </TabItem>
+
+    <TabItem value="catch2" label="Catch2">
+        <CodeBlock language="cpp">
+{`TEST_CASE("generate", "[params]") {
+    auto [a, b, sum] = GENERATE(table<int, int, int>({{1, 1, 2}, {2, 3, 5}}));
+    REQUIRE(add(a, b) == sum);
+}
+`}
+        </CodeBlock>
+    </TabItem>
+</Tabs>
+
+**jest-cpp**
+
+```cpp
+it.each(table<int, int, int>({{1, 1, 2}, {2, 3, 5}}))("%d + %d = %d", [](int a, int b, int sum) {
+    expect(add(a, b)).toBe(sum);
+});
+```
+
+Each row becomes its own test, titled from the template. `.each` takes any container, so GoogleTest's `Range` and `Combine` become ordinary C++ that builds a `std::vector` of rows. See [table-drive tests](each.md)
+
+## Typed tests
+
+<Tabs groupId="framework">
+    <TabItem value="gtest" label="GoogleTest" default>
+        <CodeBlock language="cpp">
+{`template \<class T\>
+class NumTest : public ::testing::Test {};
+
+using NumTypes = ::testing::Types<int, double>;
+TYPED_TEST_SUITE(NumTest, NumTypes);
+
+TYPED_TEST(NumTest, StartsAtZero) {
+    EXPECT_EQ(TypeParam{}, TypeParam{0});
+}
+`}
+        </CodeBlock>
+    </TabItem>
+
+    <TabItem value="catch2" label="Catch2">
+        <CodeBlock language="cpp">
+{`TEMPLATE_TEST_CASE("starts at zero", "[num]", int, double) {
+    REQUIRE(TestType{} == TestType{0});
+}
+`}
+        </CodeBlock>
+    </TabItem>
+</Tabs>
+
+**jest-cpp**
+
+```cpp
+template <class T>
+void numericTests(const std::string& name) {
+    describe(name) {
+        it("starts at zero") {
+            expect(T{}).toBe(T{0});
+        };
+    }
+}
+
+// in main:
+numericTests<int>("int");
+numericTests<double>("double");
+```
+
+jest-cpp has no typed test macro. Write a function template and call it once per type
+
+## Mocks (GoogleMock)
+
+<Tabs groupId="framework">
+    <TabItem value="gtest" label="GoogleMock" default>
+        <CodeBlock language="cpp">
+{`class MockGateway : public PaymentGateway {
+public:
+    MOCK_METHOD(bool, charge, (double amount), (override));
+};
+
+TEST(Mocks, Retries) {
+    MockGateway gw;
+    EXPECT_CALL(gw, charge(10.0)).Times(2).WillOnce(Return(false)).WillOnce(Return(true));
+    EXPECT_TRUE(pay(gw, 10.0));
+}
+`}
+        </CodeBlock>
+    </TabItem>
+</Tabs>
+
+**jest-cpp**
+
+```cpp
+struct FakeGateway : PaymentGateway {
+    Mock<bool(double)> chargeMock = fn<bool(double)>();
+    bool charge(double amount) override {
+        return chargeMock(amount);
+    }
+};
+
+it("retries once") {
+    FakeGateway gw;
+    gw.chargeMock.mockReturnValueOnce(false).mockReturnValueOnce(true);
+
+    expect(pay(gw, 10.0)).toBe(true);
+
+    expect(gw.chargeMock).toHaveBeenCalledTimes(2);
+    expect(gw.chargeMock).toHaveBeenCalledWith(10.0);
+}
+```
+
+The real difference here is when you say what you expect. GoogleMock wants expectations declared before the code runs (`EXPECT_CALL`), and checks them as calls happen. A jest-cpp mock simply records calls, and you make your assertions **afterward**
+
+| GoogleMock | jest-cpp |
+|---|---|
+| `MOCK_METHOD(R, f, (args), (override))` | a fake class with a `Mock<R(args)>` member that the override forwards to |
+| `EXPECT_CALL(m, f(x))` | `expect(m.fMock).toHaveBeenCalledWith(x)`, after the code ran |
+| `.Times(n)` | `toHaveBeenCalledTimes(n)` |
+| `.WillOnce(Return(v))` | `mockReturnValueOnce(v)` |
+| `.WillRepeatedly(Return(v))`, `ON_CALL(...).WillByDefault(Return(v))` | `mockReturnValue(v)` |
+| `Invoke(f)`, `DoAll(...)` | `mockImplementation(f)` or `mockImplementationOnce(f)` |
+| `Throw(e)` | an implementation that throws |
+| `_` | `jest::anything` |
+| `Gt(5)`, `HasSubstr("x")` as an argument matcher | not supported in `toHaveBeenCalledWith`; read `m.mock.calls` and use a normal matcher |
+| `InSequence`, `After` | not supported across mocks; within one mock use `toHaveBeenNthCalledWith` |
+| `NiceMock`, `StrictMock` | no equivalent: a mock never complains about unexpected calls |
+
+Catch2 doesn't include a mocking library. See [mock functions](mock-functions.md) for everything a jest-cpp mock can do
+
+## Running tests
+
+<Tabs groupId="framework">
+    <TabItem value="gtest" label="GoogleTest" default>
+        <CodeBlock language="cpp">
+{`int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+`}
+        </CodeBlock>
+    </TabItem>
+
+    <TabItem value="catch2" label="Catch2">
+        <CodeBlock language="cpp">
+{`int main(int argc, char* argv[]) {
+    return Catch::Session().run(argc, argv);
+}
+`}
+        </CodeBlock>
+    </TabItem>
+</Tabs>
+
+**jest-cpp**
+
+```cpp
+int main(int argc, char** argv) {
+    jest::init(argc, argv);   // before the first describe/it
+    // ... describe blocks, or calls to functions that contain them ...
+    return jest::run();
+}
+```
+
+### Command line
+
+| | GoogleTest | Catch2 | jest-cpp |
+|---|---|---|---|
+| run some tests | `--gtest_filter=Stack.*` | `"Stack*"`, or `[tag]` | `-t "^Stack "` (a regex on the full name) |
+| show every test | on by default | `-s` | `--verbose` (quiet by default) |
+| no color | `--gtest_color=no` | `--colour-mode none` | `--no-color` |
+| list tests | `--gtest_list_tests` | `--list-tests` | not available |
+| JUnit / XML | `--gtest_output=xml` | `-r junit` | not available |
+| shuffle, repeat | `--gtest_shuffle`, `--gtest_repeat=N` | `--order rand` | not available |
+| exit code on failure | 1 | 42 | 1 |
+
+A test's full name is its `describe` names followed by its own name, separated by spaces, so `-t "^Stack "` runs everything inside `describe("Stack")`. See [command line](command-line.md)
+
+### Cmake and CTest
+
+GoogleTest and Catch2 can register every test with CTest (`gtest_discover_tests`, `catch_discover_tests`). jest-cpp registers one CTest entry per executable
+
+```cmake
+add_test(NAME my_tests COMMAND my_tests)
+
+# or split one executable into several CTest entries with a filter
+add_test(NAME stack_tests COMMAND my_tests -t "^Stack ")
+```
+
+## Not available in jest-cpp yet
+
+- non-fatal expectations (`EXPECT_*`, `CHECK`), and failure context (`<<`, `SCOPED_TRACE`, `INFO`)
+- checking the type of a thrown exception (`EXPECT_THROW(f, T)`)
+- skipping or disabling tests (`DISABLED_`, `GTEST_SKIP()`, Catch2's `[.]`)
+- death tests
+- listing tests, XML/JUnit output, shuffling, repeating, sharding, and tags
+- `UnorderedElementsAre`, `AllOf`/`AnyOf` and other matcher combinators
+- strict mocks and ordered expectations
+- typed-test macros (use the function template pattern above)
+
+If one of these blocks you, please [open an issue](https://github.com/blorbee1/jest-cpp/issues)

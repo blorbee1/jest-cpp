@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `jest::anything` to match any single argument
 - Mock function tester
 - Mock functions documentation and example
+- Migration from GoogleTest/Catch2 documentation page
 
 ## [1.0.1] - 2026-10-27
 
